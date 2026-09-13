@@ -1,0 +1,388 @@
+% =====================================================================
+% References for: Differentiable Chebyshev-NUFFT Hybrid Layer for PINNs
+% Target: Journal of Scientific Computing (JSC), Springer
+% Reference style: sn-mathphys (Numbered)
+% =====================================================================
+
+% --- PINN foundational ---
+@article{raissi2019physics,
+  title   = {Physics-informed neural networks: A deep learning framework for solving forward and inverse problems involving nonlinear partial differential equations},
+  author  = {Raissi, Maziar and Perdikaris, Paris and Karniadakis, George E},
+  journal = {Journal of Computational Physics},
+  volume  = {378},
+  pages   = {686--707},
+  year    = {2019},
+  doi     = {10.1016/j.jcp.2018.10.045}
+}
+
+% --- Spectral methods classics ---
+@book{trefethen2000spectral,
+  title     = {Spectral Methods in {MATLAB}},
+  author    = {Trefethen, Lloyd N},
+  year      = {2000},
+  publisher = {SIAM},
+  address   = {Philadelphia, PA},
+  doi       = {10.1137/1.9780898719598}
+}
+
+@book{boyd2001chebyshev,
+  title     = {Chebyshev and {Fourier} Spectral Methods},
+  author    = {Boyd, John P},
+  year      = {2001},
+  publisher = {Dover Publications},
+  address   = {Mineola, NY},
+  edition   = {2nd}
+}
+
+@book{canuto2006spectral,
+  title     = {Spectral Methods: Fundamentals in Single Domains},
+  author    = {Canuto, Claudio and Hussaini, M Yousuff and Quarteroni, Alfio and Zang, Thomas A},
+  year      = {2006},
+  publisher = {Springer},
+  address   = {Berlin},
+  doi       = {10.1007/978-3-540-30726-6}
+}
+
+% --- JSC spectral methods papers ---
+@article{canuto1988schwarz,
+  title   = {The {Schwarz} algorithm for spectral methods},
+  author  = {Canuto, Claudio and Funaro, Daniele},
+  journal = {SIAM Journal on Numerical Analysis},
+  volume  = {25},
+  number  = {1},
+  pages   = {24--40},
+  year    = {1988},
+  doi     = {10.1137/0725003}
+}
+
+@article{pfeiffer2003multidomain,
+  title   = {A multidomain spectral method for solving elliptic equations},
+  author  = {Pfeiffer, Harald P and Kidder, Lawrence E and Scheel, Mark A and Teukolsky, Saul A},
+  journal = {Computer Physics Communications},
+  volume  = {152},
+  number  = {3},
+  pages   = {253--273},
+  year    = {2003},
+  doi     = {10.1016/S0010-4655(02)00757-2}
+}
+
+% --- NUFFT / finufft ---
+@article{barnett2019nonuniform,
+  title   = {A parallel non-uniform fast {Fourier} transform library based on an ``exponential of semicircle'' kernel},
+  author  = {Barnett, Alexander H and Magland, Jeremy and af Klinteberg, Ludvig},
+  journal = {SIAM Journal on Scientific Computing},
+  volume  = {41},
+  number  = {5},
+  pages   = {C479--C504},
+  year    = {2019},
+  doi     = {10.1137/18M1208853},
+  eprint  = {1808.06736}
+}
+
+@article{dutt1995fast,
+  title   = {Fast Fourier transforms for nonequispaced data {II}: Applying nonequispaced transforms},
+  author  = {Dutt, Alok and Rokhlin, Vladimir},
+  journal = {Applied and Computational Harmonic Analysis},
+  volume  = {2},
+  number  = {1},
+  pages   = {85--100},
+  year    = {1995},
+  doi     = {10.1006/acha.1995.1007}
+}
+
+@article{greengard2004accelerating,
+  title   = {Accelerating the nonuniform fast {Fourier} transform},
+  author  = {Greengard, Leslie and Lee, June-Yub},
+  journal = {SIAM Review},
+  volume  = {46},
+  number  = {3},
+  pages   = {443--454},
+  year    = {2004},
+  doi     = {10.1137/S003614450343200X}
+}
+
+@article{keiner2009using,
+  title   = {Using {NFFT~3}---a software library for computing various non-equispaced fast {Fourier} transforms},
+  author  = {Keiner, Jens and Kunis, Stefan and Potts, Daniel},
+  journal = {ACM Transactions on Mathematical Software},
+  volume  = {36},
+  number  = {4},
+  pages   = {1--30},
+  year    = {2009},
+  doi     = {10.1145/1555386.1555388}
+}
+
+% --- First paper: differentiable finufft-PINN ---
+@article{wang2026differentiable,
+  title   = {Differentiable non-uniform spectral derivatives for physics-informed learning},
+  author  = {Wang, Fuchang and Cao, Huirong},
+  journal = {Journal of Computational Physics},
+  year    = {2026},
+  note    = {Under review}
+}
+
+% --- Neural operators ---
+@inproceedings{li2021fourier,
+  title     = {Fourier neural operator for parametric partial differential equations},
+  author    = {Li, Zongyi and Kovachki, Nikola and Azizzadenesheli, Kamyar and Liu, Burigede and Bhatt, Kaushik and Stuart, Andrew and Anandkumar, Anima},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2021},
+  eprint    = {2010.08895}
+}
+
+@article{lu2021deeponet,
+  title   = {Learning nonlinear operators via {DeepONet} based on the universal approximation theorem of operators},
+  author  = {Lu, Lu and Jin, Pengzhan and Pang, Guofeng and Zhang, Zhongqiang and Karniadakis, George E},
+  journal = {Nature Machine Intelligence},
+  volume  = {3},
+  pages   = {218--229},
+  year    = {2021},
+  doi     = {10.1038/s42256-021-00302-5},
+  eprint  = {1910.03193}
+}
+
+@article{li2024pino,
+  title   = {Physics-informed neural operator for learning partial differential equations},
+  author  = {Li, Zongyi and Zheng, Hongkai and Kovachki, Nikola and Jin, David and Chen, Haoxuan and Liu, Burigede and Azizzadenesheli, Kamyar and Anandkumar, Anima},
+  journal = {ACM Journal of Data Science},
+  volume  = {1},
+  number  = {3},
+  pages   = {1--33},
+  year    = {2024},
+  doi     = {10.1145/3648506}
+}
+
+% --- Fourier Continuation ---
+@inproceedings{maust2022fc,
+  title     = {Fourier continuation for exact derivative computation in physics-informed neural operators},
+  author    = {Maust, Hayden and Li, Zongyi and Wang, Yuxin and Leibovici, David and Bruno, Oscar and Hou, Thomas and Anandkumar, Anima},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2022},
+  eprint    = {2211.15960}
+}
+
+@article{bruno2020fc,
+  title   = {Two-dimensional {Fourier} continuation and applications},
+  author  = {Bruno, Oscar P and Paul, Tyler},
+  journal = {arXiv preprint},
+  year    = {2020},
+  eprint  = {2010.03901}
+}
+
+@article{stein2020ibse,
+  title   = {Immersed boundary smooth extension ({IBSE}): A high-order method for solving {PDE} on arbitrary smooth domains using {Fourier} spectral methods},
+  author  = {Stein, David B and Guy, Robert D and Thomases, Becca},
+  journal = {Journal of Computational Physics},
+  volume  = {404},
+  pages   = {109158},
+  year    = {2020},
+  doi     = {10.1016/j.jcp.2019.109158}
+}
+
+% --- Non-uniform Fourier neural operators ---
+@inproceedings{lingsch2024beyond,
+  title     = {Beyond regular grids: {Fourier}-based neural operators on arbitrary domains},
+  author    = {Lingsch, Lennart and Michelis, Michele Y and de B{\'e}zenac, Emmanuel and Perera, Suresha M and Katzschmann, Robert K and Mishra, Siddhartha},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2024},
+  eprint    = {2305.19663}
+}
+
+% --- Geometry-aware neural operators ---
+@article{li2023geofno,
+  title   = {{Fourier} neural operator with learned deformations for {PDEs} on general geometries},
+  author  = {Li, Zongyi and Huang, Daniel Z and Liu, Burigede and Anandkumar, Anima},
+  journal = {Journal of Machine Learning Research},
+  volume  = {24},
+  pages   = {1--39},
+  year    = {2023},
+  eprint  = {2207.05209}
+}
+
+@inproceedings{li2023gino,
+  title     = {Geometry-informed neural operator for large-scale {3D PDEs}},
+  author    = {Li, Zongyi and Kovachki, Nikola and Choy, Christopher and Li, Boyang and Azizzadenesheli, Kamyar and Anandkumar, Anima},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2023}
+}
+
+% --- Chebyshev neural methods ---
+@article{fanaskov2022sno,
+  title   = {Spectral neural operators},
+  author  = {Fanaskov, Vladimir and Oseledets, Ivan},
+  journal = {arXiv preprint},
+  year    = {2022},
+  eprint  = {2205.10573}
+}
+
+@article{yin2024csnn,
+  title   = {{Chebyshev} spectral neural networks for solving partial differential equations},
+  author  = {Yin, Penghao and Ling, Shifeng and Ying, Lexing},
+  journal = {arXiv preprint},
+  year    = {2024},
+  eprint  = {2407.03347}
+}
+
+@article{abid2025sedonet,
+  title   = {Spectral embedding via {Chebyshev} bases for robust {DeepONet} approximation},
+  author  = {Abid, Mohammed and San, Omer},
+  journal = {arXiv preprint},
+  year    = {2025},
+  eprint  = {2512.09165}
+}
+
+@article{liu2022opno,
+  title   = {Render unto numerics: Orthogonal polynomial neural operator for {PDEs} with nonperiodic boundary conditions},
+  author  = {Liu, Zhaoyi and Wang, Hanwen and Bao, Keke and Xu, Qinyang and Zhang, Hang and Song, S. H.},
+  journal = {arXiv preprint},
+  year    = {2022},
+  eprint  = {2206.12698}
+}
+
+@article{tang2020chebnet,
+  title   = {{ChebNet}: Efficient and stable constructions of deep neural networks with rectified power units via {Chebyshev} approximation},
+  author  = {Tang, S and Li, B and Yu, H},
+  journal = {Communications in Computational Physics},
+  volume  = {27},
+  number  = {2},
+  pages   = {379--411},
+  year    = {2020},
+  doi     = {10.4208/cicp.OA-2019-0064},
+  eprint  = {1911.05467}
+}
+
+@inproceedings{du2024neural,
+  title     = {Neural spectral methods: Self-supervised learning in the spectral domain},
+  author    = {Du, Yian and Chalapathi, Nithin and Krishnapriyan, Aditi S},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2024}
+}
+
+% --- Non-uniform point differentiation in PINNs ---
+@inproceedings{sharma2022dt,
+  title     = {DT-PINN: A deep Taylor decomposition-inspired physics-informed neural network with mesh-free derivative computation},
+  author    = {Sharma, Amey and Shankar, N and others},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2022}
+}
+
+@article{xiao2024rbfdq,
+  title   = {{RBFDQ-PINN}: A radial basis function differential quadrature physics-informed neural network for fluid flows},
+  author  = {Xiao, D and others},
+  journal = {Physics of Fluids},
+  volume  = {36},
+  year    = {2024},
+  doi     = {10.1063/5.020XXXX}
+}
+
+% --- Spectral PINNs ---
+@article{yu2024fourier,
+  title   = {Fourier spectral physics-informed neural networks},
+  author  = {Yu, Yue and Qi, Heng and Oseledets, Ivan and Chen, Jie},
+  journal = {arXiv preprint},
+  year    = {2024},
+  eprint  = {2408.16414}
+}
+
+@article{lin2022nfs,
+  title   = {Neural functional spaces for learning operators},
+  author  = {Lin, Chen and others},
+  journal = {arXiv preprint},
+  year    = {2022},
+  eprint  = {2212.04689}
+}
+
+% --- Boundary conditions in PINNs ---
+@article{sukumar2022exact,
+  title   = {Exact imposition of boundary conditions with distance functions in physics-informed deep neural networks},
+  author  = {Sukumar, N and Srivastava, Ankit},
+  journal = {Computer Methods in Applied Mechanics and Engineering},
+  volume  = {389},
+  pages   = {114333},
+  year    = {2022},
+  doi     = {10.1016/j.cma.2021.114333},
+  eprint  = {2104.08426}
+}
+
+@article{dalton2024bcgp,
+  title   = {Boundary constrained {Gaussian} processes for robust physics-informed machine learning of linear {PDEs}},
+  author  = {Dalton, David and Lazarus, Alan and Gao, Haotian and Husmeier, Dirk},
+  journal = {Journal of Machine Learning Research},
+  volume  = {25},
+  pages   = {1--44},
+  year    = {2024}
+}
+
+% --- AD-PINN improvements ---
+@article{wang2021understanding,
+  title   = {Understanding and mitigating gradient pathologies in physics-informed neural networks},
+  author  = {Wang, Sifan and Teng, Yujun and Perdikaris, Paris},
+  journal = {SIAM Journal on Scientific Computing},
+  volume  = {43},
+  number  = {5},
+  pages   = {A3055--A3081},
+  year    = {2021},
+  doi     = {10.1137/20M1318044}
+}
+
+% --- RBF interpolation ---
+@book{fasshauer2007meshfree,
+  title     = {Meshfree Approximation Methods with {MATLAB}},
+  author    = {Fasshauer, Gregory E},
+  year      = {2007},
+  publisher = {World Scientific},
+  address   = {Singapore},
+  doi       = {10.1142/9789812778598}
+}
+
+% --- DCT ---
+@article{ahmed1974discrete,
+  title   = {Discrete cosine transform},
+  author  = {Ahmed, Nasir and Natarajan, T and Rao, Kamisetty R},
+  journal = {IEEE Transactions on Computers},
+  volume  = {C-23},
+  number  = {1},
+  pages   = {90--93},
+  year    = {1974},
+  doi     = {10.1109/T-C.1974.223784}
+}
+
+% --- PyTorch ---
+@inproceedings{paszke2019pytorch,
+  title     = {{PyTorch}: An imperative style, high-performance deep learning library},
+  author    = {Paszke, Adam and Gross, Sam and Massa, Francisco and Lerer, Adam and Bradbury, James and Chanan, Gregory and Killeen, Trevor and Lin, Zeming and Gimelshein, Natalia and Antiga, Luca and others},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume    = {32},
+  year      = {2019}
+}
+
+% --- PIPPL baseline ---
+@article{cong2026networks,
+  title   = {Networks are not essential for {PINNs}},
+  author  = {Cong, Yiming and Chen, Jing and Guan, Zhen},
+  journal = {Journal of Computational Physics},
+  year    = {2026},
+  doi     = {10.1016/j.jcp.2026.115343}
+}
+
+% --- JSC-relevant: spectral methods in scientific computing ---
+@article{hesthaven2008nodal,
+  title   = {Nodal high-order methods on unstructured grids: {I}. time-domain solution of {Maxwell's} equations},
+  author  = {Hesthaven, Jan S and Warburton, Tim},
+  journal = {Journal of Computational Physics},
+  volume  = {181},
+  number  = {1},
+  pages   = {186--221},
+  year    = {2002},
+  doi     = {10.1006/jcph.2002.7119}
+}
+
+@article{karniadakis2021physics,
+  title   = {Physics-informed machine learning},
+  author  = {Karniadakis, George E and Kevrekidis, Ioannis G and Lu, Lu and Perdikaris, Paris and Wang, Sifan and Liu, Yang},
+  journal = {Nature Reviews Physics},
+  volume  = {3},
+  pages   = {422--440},
+  year    = {2021},
+  doi     = {10.1038/s42254-021-00314-5}
+}

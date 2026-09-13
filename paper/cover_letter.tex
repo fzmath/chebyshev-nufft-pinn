@@ -1,0 +1,70 @@
+\documentclass[12pt]{letter}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, urlcolor=blue}
+
+\signature{Fuchang Wang}
+\address{
+  College of Science, Emergency Management University\\
+  No. 456 College Road, Sanhe, Hebei 065201, China\\
+  Email: \href{mailto:wangfuchang@cidp.edu.cn}{wangfuchang@cidp.edu.cn}
+}
+
+\date{\today}
+
+\begin{document}
+
+\begin{letter}{
+  Editors-in-Chief\\
+  Journal of Scientific Computing\\
+  Springer Nature
+}
+
+\opening{Dear Editors,}
+
+We are pleased to submit our manuscript entitled \textbf{``Differentiable Chebyshev--NUFFT Hybrid Layer for Physics-Informed Neural Networks with Non-Periodic Boundary Conditions''} for consideration as a regular article in the \textit{Journal of Scientific Computing}.
+
+\section*{Summary of the contribution}
+
+Physics-informed neural networks (PINNs) have emerged as a powerful framework for solving forward and inverse problems involving partial differential equations (PDEs). However, the standard PINN approach relies on automatic differentiation (AD) to compute spatial derivatives, which becomes a computational bottleneck for large-scale problems and suffers from spectral bias in high-frequency regimes. While spectral differentiation based on the fast Fourier transform (FFT) offers an attractive alternative, existing differentiable spectral layers are restricted to periodic domains with uniform collocation grids, severely limiting their applicability to real-world problems with non-periodic boundary conditions and irregular sensor placements.
+
+We address this gap by proposing a \textbf{differentiable Chebyshev--NUFFT hybrid layer} that enables spectral-accuracy derivative computation on non-periodic domains with arbitrary non-uniform collocation points. The key ingredients are:
+
+\begin{enumerate}
+  \item \textbf{Domain decomposition}: The computational domain is partitioned into Chebyshev boundary layers, where Dirichlet, Neumann, and Robin boundary conditions are enforced via spectral differentiation, and an interior region where either a Chebyshev or non-uniform fast Fourier transform (NUFFT) basis can be selected adaptively.
+  \item \textbf{Schwarz-style overlap}: A smoothstep windowing function ensures derivative continuity across the interface between boundary layers and the interior, eliminating extrapolation instability.
+  \item \textbf{Exact adjoint}: Because all components are linear in the network output, the entire hybrid operator assembles into a single constant matrix $A$ whose adjoint is simply $A^\mathsf{T}$, enabling exact end-to-end backpropagation without finite-difference approximation. This is verified by \texttt{torch.autograd.gradcheck} and the adjoint identity to machine precision.
+  \item \textbf{Error analysis}: We establish rigorous error bounds characterizing the contributions of Chebyshev truncation, scattered-point regression, NUFFT gridding, and overlap consistency.
+\end{enumerate}
+
+\section*{Why this work fits \textit{Journal of Scientific Computing}}
+
+This work aligns closely with the scope of \textit{Journal of Scientific Computing}, which publishes original research on numerical methods and algorithms for scientific computing. Our contributions are methodological in nature: we develop a new differentiable spectral operator, prove its adjoint correctness and error bounds, and demonstrate its effectiveness through systematic numerical experiments. The hybrid layer fills a clear methodological gap---the absence of differentiable spectral methods for non-periodic, non-uniform problems---and provides a reusable software component that can be integrated into any PyTorch-based PINN workflow.
+
+\section*{Key numerical findings}
+
+We present comprehensive experiments on one- and two-dimensional Poisson equations with Dirichlet, Neumann, and Robin boundary conditions, a one-dimensional heat equation, and extensive ablation studies. The results demonstrate that:
+
+\begin{itemize}
+  \item The hybrid layer achieves accuracy comparable to AD-PINN in 1D ($4.78\times10^{-6}$ vs $4.72\times10^{-6}$) while training $2.5\times$ faster.
+  \item In 2D, the hybrid layer converges ($2.07\times10^{-4}$) and trains $3.1\times$ faster than AD-PINN, while pure Chebyshev and pure Fourier methods both diverge on non-uniform non-periodic problems, confirming the necessity of the hybrid domain decomposition.
+  \item The method generalizes to Neumann and Robin boundary conditions, and to time-dependent parabolic PDEs (heat equation), with consistent speedups of $1.6$--$2.8\times$.
+  \item Ablation studies confirm robustness to boundary layer width, overlap width, and the number of collocation points, while revealing that the NUFFT interior basis fails on non-periodic subdomains due to Gibbs phenomenon---further validating the hybrid design.
+\end{itemize}
+
+\section*{Declarations}
+
+\begin{itemize}
+  \item This manuscript has not been published elsewhere and is not under consideration by any other journal.
+  \item All authors have approved the manuscript and agree with its submission to \textit{Journal of Scientific Computing}.
+  \item The authors declare no competing interests.
+  \item The code and data used in this study are available at \url{https://github.com/fzmath/chebyshev-nufft-pinn}.
+\end{itemize}
+
+We believe this work makes a significant contribution to the field of scientific computing and will be of interest to the readership of \textit{Journal of Scientific Computing}. We look forward to your consideration.
+
+\closing{Sincerely,}
+
+\end{letter}
+
+\end{document}

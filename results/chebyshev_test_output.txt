@@ -1,0 +1,15 @@
+﻿========================================================================
+Differentiable Chebyshev Spectral Layer -- unit tests
+torch 2.6.0+cu118 | numpy 1.26.0 | dtype float64
+========================================================================
+[PASS] gradcheck DiffChebyshevDerivative
+[PASS] 1st derivative sin(x) [-pi,pi] N=32  -- rel L2 = 7.97e-15
+[PASS] 2nd derivative exp(-x^2) [-1,1] N=64  -- rel L2 = 2.52e-09
+[PASS] 2D Laplacian sin(x)sin(y) [-pi,pi]^2 N=32  -- rel L2 = 5.16e-13
+[PASS] adjoint identity <Du,v>=<u,D^T v>  -- rel diff = 9.18e-16
+[PASS] DCT vs matrix (1st deriv)  -- ||diff||_2 = 1.07e-13
+[PASS] DCT vs matrix (2nd deriv)  -- ||diff||_2 = 5.75e-11
+[PASS] Dirichlet BC u=x^2 on [0,1]  -- rel L2 = 3.48e-14, bc_imposed = True
+------------------------------------------------------------------------
+Result: 8/8 tests passed
+========================================================================

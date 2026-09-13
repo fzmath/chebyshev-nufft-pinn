@@ -1,0 +1,15 @@
+﻿========================================================================
+Differentiable Chebyshev-NUFFT Hybrid Layer -- unit tests
+torch 2.6.0+cu118 | numpy 1.26.0 | dtype float64
+========================================================================
+[PASS] gradcheck DiffHybridDerivative
+[PASS] 1st deriv sin(pi x) [0,1] M=500  -- rel L2 = 1.17e-11
+[PASS] 2nd deriv exp(-x^2) [-1,1] M=500  -- rel L2 = 1.12e-09
+[PASS] adjoint identity <Au,v>=<u,A^T v>  -- rel diff = 1.72e-16
+[PASS] 2D Laplacian sin(pi x)sin(pi y) M=1000  -- rel L2 = 4.44e-05
+[PASS] boundary derivative u=x^2 on [0,1]  -- boundary rel L2 = 1.97e-12, all = 9.47e-10
+[PASS] pure Chebyshev limit delta=0.5  -- rel L2 = 3.68e-14
+[PASS] pure NUFFT limit delta=0.01  -- deep-interior rel L2 = 6.38e-15
+------------------------------------------------------------------------
+Result: 8/8 tests passed
+========================================================================
