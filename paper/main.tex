@@ -78,11 +78,11 @@
 \author*[1]{\fnm{Fuchang} \sur{Wang}}\email{wangfuchang@cidp.edu.cn}
 \author[2]{\fnm{Huirong} \sur{Cao}}\email{huirongcao@126.com}
 
-\affil*[1]{\orgdiv{College of Science}, \orgname{Emergency Management University},
-  \orgaddress{\street{No. 456 College Road}, \city{Sanhe}, \postcode{065201},
+\affil*[1]{\orgdiv{School of Science}, \orgname{Emergency Management University},
+  \orgaddress{\street{No. 465 College Road}, \city{Sanhe}, \postcode{065201},
   \state{Hebei}, \country{China}}}
 
-\affil[2]{\orgdiv{College of Science}, \orgname{Langfang Normal University},
+\affil[2]{\orgdiv{School of Science}, \orgname{Langfang Normal University},
   \orgaddress{\street{No. 100 Ai-min Road}, \city{Langfang}, \postcode{065000},
   \state{Hebei}, \country{China}}}
 
@@ -90,14 +90,16 @@
 %%% Abstract
 %%% =====================================================================
 \abstract{
-We propose a differentiable hybrid spectral layer for computing spatial derivatives in physics-informed neural networks (PINNs) on non-periodic domains with arbitrary collocation point distributions. The layer decomposes the computational domain into Chebyshev boundary layers, where Dirichlet, Neumann, and Robin boundary conditions are enforced via spectral differentiation, and an interior region where either a Chebyshev or non-uniform fast Fourier transform (NUFFT) basis can be selected adaptively. A Schwarz-style overlap region with smoothstep windowing ensures derivative continuity across the interface. Because all components are linear in the network output, the entire hybrid operator assembles into a single constant matrix whose adjoint is its transpose, enabling exact end-to-end backpropagation without finite-difference approximation. We establish error bounds characterizing the contributions of Chebyshev truncation, scattered-point regression, NUFFT gridding, and overlap consistency. Numerical experiments on one- and two-dimensional Poisson equations with Dirichlet, Neumann, and Robin boundary conditions, as well as a one-dimensional heat equation, demonstrate that the proposed method achieves accuracy comparable to automatic-differentiation-based PINNs ($4.8\times10^{-6}$ in 1D, $9.9\times10^{-6}$ in 2D) while training $1.6$--$2.8\times$ faster, and that pure Fourier methods fail to converge on non-periodic problems, confirming the necessity of the Chebyshev boundary treatment.
+We propose a differentiable hybrid spectral layer for computing spatial derivatives in physics-informed neural networks (PINNs) on non-periodic domains with arbitrary collocation point distributions. The layer decomposes the computational domain into Chebyshev boundary layers, where Dirichlet, Neumann, and Robin boundary conditions are enforced via spectral differentiation, and an interior region where either a Chebyshev or non-uniform fast Fourier transform (NUFFT) basis can be selected adaptively. A Schwarz-style overlap region with smoothstep windowing ensures derivative continuity across the interface. Because all components are linear in the network output, the entire hybrid operator assembles into a single constant matrix whose adjoint is its transpose, enabling exact end-to-end backpropagation without finite-difference approximation. We establish error bounds characterizing the contributions of Chebyshev truncation, scattered-point regression, NUFFT gridding, and overlap consistency. Numerical experiments on one- and two-dimensional Poisson equations with Dirichlet, Neumann, and Robin boundary conditions, a one-dimensional heat equation, and a diffusion-coefficient inversion problem demonstrate that the proposed method achieves accuracy comparable to automatic-differentiation-based PINNs ($4.8\times10^{-6}$ in 1D, $9.9\times10^{-6}$ in 2D) while training $1.6$--$5.6\times$ faster, and that pure Fourier methods fail to converge on non-periodic problems, confirming the necessity of the Chebyshev boundary treatment.
 }
 
-\keywords{Physics-informed neural networks \sep Spectral methods \sep Chebyshev polynomials \sep
-Non-uniform FFT \sep Differentiable programming \sep Non-periodic boundary conditions \sep
-Adjoint method}
+\keywords{Physics-informed neural networks ,  Spectral methods ,  Chebyshev polynomials , 
+Non-uniform FFT ,  Non-periodic boundary conditions ,  Adjoint method}
 
 \maketitle
+
+{\footnotesize\noindent\textbf{Mathematics Subject Classification.} 65M70, 65N35, 68T07, 41A10\par}
+
 
 %%% =====================================================================
 %%% 1. Introduction
@@ -105,39 +107,39 @@ Adjoint method}
 \section{Introduction}\label{sec:intro}
 
 \subsection{Background and motivation}
-Physics-informed neural networks (PINNs), introduced by Raissi et al.~\cite{raissi2019physics}, embed partial differential equations (PDEs) into the loss function of a neural network, providing a mesh-free framework for solving forward and inverse problems. The canonical PINN computes spatial derivatives of the network output via automatic differentiation (AD), which is flexible but suffers from two well-known limitations in scientific computing: (i) AD scales poorly with the order and dimensionality of derivatives, requiring repeated backward passes that dominate training time for high-order or multi-dimensional PDEs; and (ii) AD-derived derivatives inherit the approximation error of the neural network, potentially compromising the high-order accuracy that classical spectral methods achieve for smooth solutions.
+Physics-informed neural networks (PINNs), introduced by Raissi et al.~\cite{raissi2019physics}, embed partial differential equations (PDEs) into the loss function of a neural network, providing a mesh-free framework for forward and inverse problems~\cite{karniadakis2021physics}. The canonical PINN computes spatial derivatives via automatic differentiation (AD), which is flexible but has two drawbacks for high-order or multi-dimensional PDEs: (i) AD requires repeated backward passes whose cost grows with derivative order and dimension, and (ii) AD-derived derivatives inherit the network's approximation error and can suffer from gradient pathologies~\cite{wang2021understanding}, whereas classical spectral methods achieve high-order accuracy for smooth solutions.
 
-Spectral methods~\cite{trefethen2000spectral,boyd2001chebyshev,canuto2006spectral} offer an attractive alternative: by representing functions in a suitable basis (Fourier for periodic domains, Chebyshev for non-periodic domains), derivatives can be computed with spectral (exponential) convergence for analytic solutions. Recent work~\cite{wang2026differentiable} has demonstrated that embedding a differentiable non-uniform fast Fourier transform (finufft) layer into PINNs enables spectral-accuracy derivative computation on arbitrary non-uniform collocation points, significantly outperforming AD-based PINNs on periodic problems. However, this approach is inherently limited to periodic boundary conditions, as the Fourier basis assumes periodic extension of the solution.
+Spectral methods~\cite{trefethen2000spectral,boyd2001chebyshev,canuto2006spectral} compute derivatives with spectral (exponential) convergence for analytic solutions by representing functions in a suitable basis---Fourier for periodic domains, Chebyshev for non-periodic domains. Recent work~\cite{wang2026differentiable} embedded a differentiable non-uniform fast Fourier transform (finufft) layer into PINNs, enabling spectral-accuracy derivatives on arbitrary non-uniform collocation points and outperforming AD-based PINNs on periodic problems. That approach is limited to periodic boundary conditions, however, because the Fourier basis assumes periodic extension.
 
-Many important PDEs in scientific computing and engineering are posed on non-periodic finite domains with Dirichlet, Neumann, Robin, or mixed boundary conditions. For such problems, Chebyshev spectral methods are the standard choice, owing to their ability to handle general boundary conditions and their exponential convergence for analytic solutions on finite intervals. The challenge lies in combining the boundary-condition flexibility of Chebyshev methods with the non-uniform sampling capability of NUFFT within a single differentiable layer.
+Many PDEs in scientific computing and engineering are posed on non-periodic finite domains with Dirichlet, Neumann, Robin, or mixed boundary conditions. Chebyshev spectral methods are the standard choice for such problems, owing to their handling of general boundary conditions and exponential convergence on finite intervals. The difficulty is to combine the boundary-condition flexibility of Chebyshev methods with the non-uniform sampling capability of NUFFT within a single differentiable layer.
 
 \subsection{Related work}
-Our work intersects several active research areas.
+This work sits at the intersection of several research areas.
 
 \paragraph{Differentiable spectral operators.}
-Fourier neural operators (FNO)~\cite{li2021fourier} and physics-informed neural operators (PINO)~\cite{li2024pino} employ spectral convolution in Fourier space, but require uniform grids and assume periodicity. Fourier continuation (FC) methods~\cite{maust2022fc,bruno2020fc} extend non-periodic functions to periodic ones by solving small linear systems near boundaries, enabling FFT-based differentiation; FC-PINO~\cite{maust2022fc} applies this idea to neural operators. However, FC methods remain on uniform grids and incur the cost of solving extension systems. Lingsch et al.~\cite{lingsch2024beyond} extend Fourier-based neural operators to arbitrary point distributions via direct spectral evaluation, but retain the periodic complex-exponential basis and do not handle non-periodic boundary conditions.
+Fourier neural operators (FNO)~\cite{li2021fourier} and physics-informed neural operators (PINO)~\cite{li2024pino} use spectral convolution in Fourier space but require uniform grids and assume periodicity. Fourier continuation (FC) methods~\cite{maust2022fc,bruno2020fc} extend non-periodic functions to periodic ones by solving small linear systems near boundaries, enabling FFT-based differentiation; FC-PINO~\cite{maust2022fc} applies this idea to neural operators. FC methods remain on uniform grids and incur the cost of solving extension systems. Lingsch et al.~\cite{lingsch2024beyond} extend Fourier-based neural operators to arbitrary point distributions via direct spectral evaluation, but retain the periodic complex-exponential basis and do not handle non-periodic boundary conditions.
 
 \paragraph{Chebyshev neural methods.}
-Spectral neural operators (SNO)~\cite{fanaskov2022sno} use Chebyshev and Fourier series expansions in coefficient space. Chebyshev spectral neural networks (CSNN)~\cite{yin2024csnn} construct single-layer networks with Chebyshev basis functions satisfying boundary conditions. Orthogonal polynomial neural operators (OPNO)~\cite{liu2022opno} rigorously enforce Dirichlet, Neumann, and Robin conditions via orthogonal polynomial bases. SEDONet~\cite{abid2025sedonet} embeds Chebyshev spectral dictionaries into DeepONet inputs. All these methods operate on uniform or regular collocation nodes and do not support arbitrary non-uniform point distributions.
+Spectral neural operators (SNO)~\cite{fanaskov2022sno} use Chebyshev and Fourier series expansions in coefficient space. Chebyshev spectral neural networks (CSNN)~\cite{yin2024csnn} construct single-layer networks with Chebyshev basis functions satisfying boundary conditions. Orthogonal polynomial neural operators (OPNO)~\cite{liu2022opno} enforce Dirichlet, Neumann, and Robin conditions via orthogonal polynomial bases. SEDONet~\cite{abid2025sedonet} embeds Chebyshev spectral dictionaries into DeepONet inputs. These methods operate on uniform or regular collocation nodes and do not support arbitrary non-uniform point distributions.
 
 \paragraph{Non-uniform point differentiation in PINNs.}
-DT-PINN~\cite{sharma2022dt} and RBFDQ-PINN~\cite{xiao2024rbfdq} use radial-basis-function finite differences for derivative computation on non-uniform points, achieving only local (polynomial-order) accuracy. Spectral PINNs~\cite{yu2024fourier,lin2022nfs} use Fourier spectral differentiation but require uniform grids or interpolation. To our knowledge, no existing method combines global spectral accuracy, non-uniform collocation support, and rigorous non-periodic boundary condition handling in a single differentiable layer.
+DT-PINN~\cite{sharma2022dt} uses radial-basis-function finite differences on non-uniform points, achieving only local (polynomial-order) accuracy. Spectral PINNs~\cite{yu2024fourier} use Fourier spectral differentiation but require uniform grids or interpolation. No existing method, to our knowledge, combines global spectral accuracy, non-uniform collocation support, and non-periodic boundary condition handling in a single differentiable layer.
 
 \subsection{Contributions}
-This paper makes the following contributions:
+The main contributions of this work are as follows.
 
 \begin{enumerate}
-    \item \textbf{Differentiable Chebyshev spectral layer}: We implement a fully differentiable Chebyshev differentiation layer based on Gauss--Lobatto differentiation matrices, with exact adjoint (matrix transpose) for backpropagation. The layer supports arbitrary domains and Dirichlet, Neumann, and Robin boundary conditions through boundary-degree-of-freedom elimination.
+    \item \textbf{Differentiable Chebyshev layer.} A Chebyshev differentiation layer based on Gauss--Lobatto nodes is implemented, with the matrix transpose as its exact adjoint for backpropagation. Dirichlet, Neumann, and Robin boundary conditions are imposed by eliminating boundary degrees of freedom.
 
-    \item \textbf{Chebyshev--NUFFT hybrid architecture}: We design a domain decomposition framework that uses Chebyshev differentiation in boundary layers (where non-periodic boundary conditions are enforced) and an adaptive interior basis (Chebyshev for non-periodic accuracy, NUFFT for periodic subdomains or uniform sampling). A Schwarz-style overlap region with smoothstep windowing ensures derivative continuity, and the entire operator assembles into a single constant matrix for efficient training.
+    \item \textbf{Chebyshev--NUFFT hybrid architecture.} A domain decomposition uses Chebyshev differentiation in boundary layers and an adaptive interior basis (Chebyshev or NUFFT). A Schwarz overlap with smoothstep windowing maintains derivative continuity, and the whole operator reduces to a single constant matrix.
 
-    \item \textbf{Exact adjoint derivation and error analysis}: We rigorously derive the adjoint operator of the hybrid layer, composing the adjoints of the Chebyshev differentiation matrix, NUFFT Type~1/Type~2 transforms, interpolation operators, and window functions. We establish error bounds decomposing the total error into Chebyshev truncation error, NUFFT gridding error, and overlap interpolation error, with convergence rates for analytic solutions.
+    \item \textbf{Adjoint derivation and error analysis.} The adjoint of the hybrid layer follows by composing the adjoints of its components. Error bounds separate the contributions of Chebyshev truncation, NUFFT gridding, and overlap interpolation, with convergence rates for analytic solutions.
 
-    \item \textbf{Comprehensive numerical validation}: We validate the method on 1D and 2D Poisson equations with Dirichlet, Neumann, and Robin boundary conditions, a 1D heat equation, and compare with AD-PINN, pure Chebyshev PINN, and pure finufft PINN. Ablation studies isolate the contributions of the boundary layer width, overlap width, Chebyshev modes, collocation point density, and interior basis selection. The experiments demonstrate that the hybrid layer achieves accuracy comparable to AD-PINN while training significantly faster, and that both pure Chebyshev and pure Fourier methods fail on non-uniform non-periodic problems.
+    \item \textbf{Numerical validation.} Experiments on 1D/2D Poisson equations (Dirichlet, Neumann, Robin), a heat equation, and a diffusion-coefficient inversion problem compare with AD-PINN and pure spectral PINNs. Ablation studies isolate the effects of boundary width, overlap, modes, and point density.
 \end{enumerate}
 
 \subsection{Paper organization}
-The remainder of this paper is organized as follows. Section~\ref{sec:prelim} introduces preliminaries on Chebyshev spectral methods and differentiable NUFFT. Section~\ref{sec:method} presents the differentiable Chebyshev layer and the hybrid architecture, including the adjoint derivation and error analysis. Section~\ref{sec:experiments} reports numerical experiments on 1D/2D Poisson equations (Dirichlet, Neumann, Robin), a heat equation, and comprehensive ablation studies. Section~\ref{sec:conclusion} concludes.
+Section~\ref{sec:prelim} reviews Chebyshev spectral methods and differentiable NUFFT. Section~\ref{sec:method} presents the differentiable Chebyshev layer and the hybrid architecture, along with the adjoint derivation and error analysis. Section~\ref{sec:experiments} reports numerical experiments on 1D/2D Poisson equations (Dirichlet, Neumann, Robin), a heat equation, an inversion problem, and ablation studies. Section~\ref{sec:conclusion} concludes.
 
 %%% =====================================================================
 %%% 2. Preliminaries
@@ -189,7 +191,7 @@ If $f$ is analytic in a Bernstein ellipse $E_\rho$ with foci $\pm 1$ and semi-ma
 where $C > 0$ is independent of $N$ and $\|f\|_{E_\rho}$ is the maximum modulus on $E_\rho$.
 \end{proposition}
 \begin{proof}
-This follows from standard Chebyshev approximation theory~\cite[Chapter~5]{trefethen2000spectral}: the interpolation error decays as $\mathcal{O}(\rho^{-N})$, and differentiation amplifies the error by at most $\mathcal{O}(N^2)$ due to the norm of the differentiation matrix.
+Let $p_N$ be the degree-$N$ Chebyshev interpolant of $f$ at the Gauss--Lobatto nodes. The interpolation error satisfies $\|f-p_N\|_\infty\leq C_I\rho^{-N}\|f\|_{E_\rho}$ for analytic $f$~\cite[Theorem~5.5]{trefethen2000spectral}. The derivative error is $\|f'-p_N'\|_\infty=\|D_N(f-p_N)\|_\infty\leq\|D_N\|_\infty\|f-p_N\|_\infty$, where $D_N$ is the Chebyshev differentiation matrix. The $\infty$-norm of $D_N$ satisfies $\|D_N\|_\infty=O(N^2)$~\cite[Chapter~6]{trefethen2000spectral}. Combining these estimates gives~\eqref{eq:cheb_error}.
 \end{proof}
 
 \subsection{Differentiable NUFFT for periodic domains}\label{subsec:diff_nufft}
@@ -208,15 +210,21 @@ In~\cite{wang2026differentiable}, both types are wrapped as PyTorch autograd Fun
 with a Riemann-sum scaling factor $1/M$ where $M$ is the number of non-uniform points.
 
 \begin{proposition}[NUFFT derivative accuracy]\label{prop:nufft_acc}
-For a function $u$ with Fourier coefficients decaying as $|\hat{u}_k| \leq C |k|^{-p}$ ($p > 1$), the NUFFT spectral derivative with $N$ modes and precision tolerance $\epsilon$ satisfies
+For a function $u$ with Fourier coefficients decaying as $|\hat{u}_k| \leq C |k|^{-p}$ ($p > m+\tfrac12$), the NUFFT spectral derivative with $N$ modes and precision tolerance $\epsilon_{\mathrm{tol}}$ satisfies
 \begin{equation}
-    \|u^{(m)} - \mathcal{D}_{\nufft}^{(m)} u\|_2 \leq C_1 N^{m-p+1/2} + C_2 \epsilon \|u\|_2,
+    \|u^{(m)} - \mathcal{D}_{\nufft}^{(m)} u\|_2 \leq C_1 N^{m-p+1/2} + C_2 \epsilon_{\mathrm{tol}} \|u\|_2,
     \label{eq:nufft_error}
 \end{equation}
-where the first term is the Fourier truncation error and the second is the NUFFT gridding error.
+where the first term is the Fourier truncation error and the second is the NUFFT gridding error. The norm is the discrete $\ell^2$ norm on the $M$ non-uniform collocation points.
 \end{proposition}
 \begin{proof}
-The truncation error follows from the decay of Fourier coefficients; the gridding error bound is established in~\cite{barnett2019nonuniform}.
+Write $u(x)=\sum_{k\in\mathbb{Z}}\hat{u}_k e^{ikx}$ with $|\hat{u}_k|\leq C|k|^{-p}$. Truncating to $|k|\leq N$ and differentiating $m$ times gives
+\[
+\|u^{(m)}-u_N^{(m)}\|_2^2=\sum_{|k|>N}|k|^{2m}|\hat{u}_k|^2
+\leq C^2\sum_{|k|>N}|k|^{2m-2p}
+\leq C' N^{2m-2p+1},
+\]
+where the last step uses the integral test for $p>m+\tfrac12$. Taking square roots yields the truncation term $C_1 N^{m-p+1/2}$. The gridding error of the NUFFT is bounded by $C_2\epsilon_{\mathrm{tol}}\|u\|_2$~\cite[Theorem~2.1]{barnett2019nonuniform}, giving the second term.
 \end{proof}
 
 %%% =====================================================================
@@ -226,7 +234,7 @@ The truncation error follows from the decay of Fourier coefficients; the griddin
 
 \subsection{Differentiable Chebyshev layer}\label{subsec:diff_cheb}
 
-We implement the Chebyshev differentiation as a PyTorch autograd Function. Given the differentiation matrix $D$ (a constant tensor), the forward pass is
+The Chebyshev differentiation is implemented as a PyTorch autograd Function. Given the differentiation matrix $D$ (a constant tensor), the forward pass is
 \begin{equation}
     \mathbf{g} = D \mathbf{u},
     \label{eq:cheb_forward}
@@ -236,7 +244,7 @@ and the backward pass (adjoint) is
     \bar{\mathbf{u}} = D^\T \bar{\mathbf{g}},
     \label{eq:cheb_backward}
 \end{equation}
-where $\bar{\mathbf{g}}$ is the gradient propagated from downstream. Since $D$ is a constant matrix, no gradient flows to $D$ itself.
+where $\bar{\mathbf{g}}$ is the gradient propagated from downstream. Since $D$ is constant, no gradient flows to $D$ itself.
 
 \subsubsection{Boundary condition enforcement}
 For Dirichlet boundary conditions $u(a) = g_a$, $u(b) = g_b$, we partition the differentiation matrix as
@@ -290,12 +298,12 @@ with $s$ controlling the transition sharpness, and construct
     w_I(x) &= 1 - w_L(x) - w_R(x).
 \end{align}
 
-For the Chebyshev boundary layers, function values at non-uniform points are fitted to Chebyshev coefficients via SVD-regularized least-squares regression on the Vandermonde matrix $V_{ij} = T_j(\xi_i)$, where $\xi_i$ are the mapped collocation points. Rather than differentiating on a Lobatto grid and then re-interpolating (which squares the fitting error), we evaluate the derivative polynomial directly at arbitrary points via the composition
+For the Chebyshev boundary layers, function values at non-uniform points are fitted to Chebyshev coefficients via singular value decomposition (SVD)-regularized least-squares regression on the Vandermonde matrix $V_{ij} = T_j(\xi_i)$, where $\xi_i$ are the mapped collocation points. Rather than differentiating on a Lobatto grid and then re-interpolating (which squares the fitting error), the derivative polynomial is evaluated directly at arbitrary points via
 \begin{equation}
     \frac{\dd^m u}{\dd \xi^m}\bigg|_{\xi_{\mathrm{eval}}} = E \, C^m \, V^\dagger \, u_{\mathrm{scattered}},
     \label{eq:cheb_direct_eval}
 \end{equation}
-where $V^\dagger$ is the SVD pseudoinverse of the Vandermonde matrix (fitting scattered values to Chebyshev coefficients), $C$ is the coefficient-space derivative recurrence, and $E_{in} = T_n(\xi_{\mathrm{eval},i})$ evaluates the derivative polynomial at the query points. This avoids the error amplification of a second interpolation step and achieves machine-precision accuracy for smooth functions (see Section~\ref{subsec:exp1}).
+where $V^\dagger$ is the SVD pseudoinverse of the Vandermonde matrix (fitting scattered values to Chebyshev coefficients), $C$ is the coefficient-space derivative recurrence, and $E_{in} = T_n(\xi_{\mathrm{eval},i})$ evaluates the derivative polynomial at the query points. This avoids the error amplification of a second interpolation step; derivative accuracy is verified in Section~\ref{subsec:exp1}.
 
 For the interior region, two spectral bases are available:
 \begin{itemize}
@@ -307,12 +315,12 @@ The choice is controlled by the \texttt{interior\_method} parameter; all paths p
 To avoid Chebyshev extrapolation instability in the overlap region, we employ a Schwarz-style overlapping decomposition: each boundary layer's Chebyshev interval extends by $\epsilon$ into the interior, so that both representations remain within their respective $[-1,1]$ reference domains throughout the overlap. A smoothstep window then blends the two derivatives, with the interior weight vanishing exactly at the boundary layer endpoints.
 
 \subsubsection{Matrix representation and differentiability}
-Because the collocation points are fixed during training, every component of the hybrid operator---scattered regression matrices, Chebyshev differentiation matrices, NUFFT transforms, and window functions---is a constant linear map. The entire hybrid derivative is therefore a single constant matrix $A \in \R^{M \times M}$:
+Because the collocation points are fixed during training, every component of the hybrid operator---scattered regression matrices, Chebyshev differentiation matrices, NUFFT transforms, and window functions---is a constant linear map. The hybrid derivative is therefore a single constant matrix $A \in \R^{M \times M}$:
 \begin{equation}
     u'_{\hybrid} = A \, u,
     \label{eq:hybrid_matrix}
 \end{equation}
-and its adjoint is simply $A^\T$. We wrap this as a \texttt{torch.autograd.Function} with forward pass $A u$ and backward pass $A^\T \bar{u}$, verified by \texttt{gradcheck} to machine precision. This matrix representation also enables efficient precomputation: $A$ is assembled once before training, and each training step requires only a matrix-vector product.
+and its adjoint is $A^\T$. This is wrapped as a \texttt{torch.autograd.Function} with forward pass $A u$ and backward pass $A^\T \bar{u}$, verified by \texttt{gradcheck} to machine precision. The matrix $A$ is assembled once before training; each training step then requires only a matrix-vector product.
 
 \subsubsection{2D extension}
 In 2D, the domain decomposition extends to a frame of boundary layers (left, right, bottom, top) with a rectangular interior. For the Laplacian, we compute the second derivative along each axis using the 1D hybrid operator and sum the results, i.e., $\Delta u = \calD_{hybrid,x}^{(2)} u + \calD_{hybrid,y}^{(2)} u$. This directional approach reuses the verified 1D code path and naturally handles mixed boundary conditions on different sides. Corner regions are covered by the tensor-product of 1D boundary layers.
@@ -353,57 +361,112 @@ This exact adjoint enables backpropagation through the entire hybrid layer with 
 
 \subsection{Error analysis}\label{subsec:error}
 
-\begin{theorem}[Hybrid derivative error bound]\label{thm:error}
-Let $u$ be analytic on $\Omega$ with Bernstein ellipse parameter $\rho > 1$. Let $N_c$ be the number of Chebyshev modes, $N_f$ the number of Fourier modes (when NUFFT is used in the interior), $\epsilon_{\mathrm{reg}}$ the scattered regression error, and $\epsilon_{\mathrm{overlap}}$ the overlap consistency error. Then the hybrid derivative error satisfies
+Before stating the main error bound, we establish two auxiliary results that quantify the two principal sources of error in the hybrid layer: the scattered-point regression and the window-function blending.
+
+\begin{lemma}[Conditioning of scattered Chebyshev regression]\label{lem:vandermonde}
+Let $x_1,\ldots,x_M$ be distinct points in $[-1,1]$ with minimum separation $h_{\min}>0$, and let $V\in\R^{M\times N}$ be the Chebyshev Vandermonde matrix $V_{ij}=T_{j-1}(x_i)$. If $M\geq N$, then $V$ has full column rank and the least-squares solution $\hat{c}=V^\dagger u$ satisfies
 \begin{equation}
-    \|u' - \calD_{\hybrid} u\|_\infty \leq
-    C_1 \rho^{-N_c} N_c^2
-    + C_2 \, \epsilon_{\mathrm{int}}
-    + C_3 \, \epsilon_{\mathrm{reg}}
-    + C_4 \, \epsilon_{\mathrm{overlap}},
+    \|\hat{c}-c^*\|_2 \leq \frac{\|u-Vc^*\|_2}{\sigma_{\min}(V)},
+    \label{eq:vandermonde_bound}
+\end{equation}
+where $c^*$ are the first $N$ Chebyshev coefficients of $u$ and $\sigma_{\min}(V)$ is the smallest singular value of $V$. For Halton quasi-random points with $N\leq 64$, numerical evaluation gives $\kappa_2(V)=O(10^3)$ and $\sigma_{\min}(V)\geq c_0 M^{1/2}$ for an absolute constant $c_0>0$ (equivalently, $\sigma_{\min}(V)/\sqrt{M}$ is bounded below), so the regression is well-conditioned provided $M\geq 2N$.
+\end{lemma}
+\begin{proof}
+Since $V$ has full column rank, $V^\dagger V=I_N$. Therefore $\hat{c}-c^*=V^\dagger u-c^*=V^\dagger(u-Vc^*)$, and taking norms gives~\eqref{eq:vandermonde_bound} with $\|V^\dagger\|_2=1/\sigma_{\min}(V)$. The conditioning claims for Halton points follow from direct SVD computation; the lower bound on $\sigma_{\min}$ follows from the fact that Halton points are asymptotically equidistributed, so $V^\T V/M$ converges to a positive-definite diagonal matrix (the Chebyshev polynomials are orthogonal with respect to the arcsine measure, and Halton sampling approximates this measure).
+\end{proof}
+
+\begin{lemma}[Window-function blending error]\label{lem:window}
+Let $u_L$ and $u_I$ be two approximations to $u$ on an overlap region, and let $w_L,w_I\geq 0$ with $w_L+w_I\equiv 1$. The blended derivative is
+\begin{equation}
+    \frac{d}{dx}\bigl(w_L u_L + w_I u_I\bigr)
+    = w_L u_L' + w_I u_I' + w_L'(u_L-u) + w_I'(u_I-u),
+    \label{eq:window_deriv}
+\end{equation}
+where we used $w_L'+w_I'=0$ to drop the term $w_L'u+w_I'u$. The blending error is therefore
+\begin{align}
+    \left\|\frac{d}{dx}(w_L u_L+w_I u_I)-u'\right\|_\infty
+    &\leq \|w_L\|_\infty\|u_L'-u'\|_\infty + \|w_I\|_\infty\|u_I'-u'\|_\infty \nonumber \\
+    &\quad + \|w_L'\|_\infty\|u_L-u\|_\infty + \|w_I'\|_\infty\|u_I-u\|_\infty.
+    \label{eq:window_error}
+\end{align}
+For the smoothstep window with transition width $\epsilon$, $\|w_L'\|_\infty=\|w_I'\|_\infty=O(\epsilon^{-1})$.
+\end{lemma}
+\begin{proof}
+Equation~\eqref{eq:window_deriv} follows from the product rule and $w_L+w_I\equiv 1$. The bound~\eqref{eq:window_error} is the triangle inequality. The derivative bound for smoothstep follows from direct differentiation: if $w_L(x)=S((x-a)/\epsilon)$ with $S$ the cubic smoothstep, then $|w_L'(x)|\leq 3/(2\epsilon)$.
+\end{proof}
+
+\begin{remark}
+Lemma~\ref{lem:window} reveals an effect absent from naive error estimates: even if both $u_L'$ and $u_I'$ are exact, the blending of \emph{function values} through a non-constant window introduces a term proportional to $w_L'(u_L-u)$. This term is controlled by the function-value approximation error (not the derivative error), and is amplified by $\epsilon^{-1}$. In practice, the Chebyshev regression achieves function-value error of $O(\rho^{-N_c})$, so this term remains exponentially small for $\epsilon$ not too small.
+\end{remark}
+
+\begin{theorem}[Hybrid derivative error bound]\label{thm:error}
+Let $u$ be analytic on $\Omega$ with Bernstein ellipse parameter $\rho>1$. Let $N_c$ be the number of Chebyshev modes, $N_f$ the number of Fourier modes (when NUFFT is used), $\epsilon$ the overlap width, and $M\geq 2N_c$ the number of collocation points. Then the $m$-th hybrid derivative error satisfies
+\begin{equation}
+    \|u^{(m)}-\calD_{\hybrid}^{(m)}u\|_\infty
+    \leq C_1\rho^{-N_c}N_c^{2m}
+    + C_2\epsilon_{\mathrm{int}}
+    + C_3\rho^{-N_c}
+    + C_4\epsilon^{-1}\rho^{-N_c},
     \label{eq:hybrid_error}
 \end{equation}
-where the interior error $\epsilon_{\mathrm{int}}$ depends on the chosen basis:
+where:
 \begin{itemize}
-    \item \textbf{Chebyshev interior}: $\epsilon_{\mathrm{int}} = C \rho^{-N_c} N_c^2$ (exponential convergence, same as boundary layers),
-    \item \textbf{NUFFT interior}: $\epsilon_{\mathrm{int}} = C N_f^{1-p} + C' \epsilon_{\nufft}$ for Fourier coefficient decay rate $p$, with algebraic convergence for non-periodic functions due to Gibbs phenomenon.
+    \item $C_1$ depends on $\rho$, $m$, and the domain mapping,
+    \item $\epsilon_{\mathrm{int}}$ is the interior-basis error (Chebyshev: $C\rho^{-N_c}N_c^{2m}$; NUFFT: $CN_f^{1-p}+C'\epsilon_{\mathrm{tol}}$, where $\epsilon_{\mathrm{tol}}$ is the NUFFT precision tolerance),
+    \item $C_3=\|EC^m\|_2/\sigma_{\min}(V)$ captures the scattered regression amplification,
+    \item $C_4$ is the window-function blending constant from Lemma~\ref{lem:window}.
 \end{itemize}
 \end{theorem}
 \begin{proof}
-We decompose the error by region and apply the triangle inequality. Let $\chi_L, \chi_I, \chi_R$ denote the indicator functions of $\Omega_L, \Omega_I, \Omega_R$, respectively, and recall that the window functions satisfy $w_L + w_I + w_R \equiv 1$ with $0 \leq w_k \leq 1$.
+We decompose the error by region and apply the triangle inequality. Let $\Omega_L,\Omega_I,\Omega_R$ denote the left boundary layer, interior, and right boundary layer, respectively, with overlap regions $\Omega_L\cap\Omega_I$ and $\Omega_I\cap\Omega_R$.
 
-\textbf{Step 1: Boundary layer error.}
-In $\Omega_L \cup \Omega_R$, the derivative is computed via the Chebyshev direct-evaluation pipeline $E C^m V^\dagger$ (Eq.~\eqref{eq:cheb_direct_eval}). By Proposition~\ref{prop:cheb_conv}, the Chebyshev truncation error for the $m$-th derivative of an analytic function is bounded by $C_T \rho^{-N_c} N_c^{2m}$ for some constant $C_T$ depending on $u$ and the domain. The scattered regression via SVD pseudoinverse introduces an additional error $\epsilon_{\mathrm{reg}} = \|V^\dagger\|_2 \cdot \eta_{\mathrm{fit}}$, where $\eta_{\mathrm{fit}}$ is the least-squares fitting residual. For well-conditioned Vandermonde matrices (Halton points, $N_c \leq 64$), $\|V^\dagger\|_2 = O(1)$ and $\eta_{\mathrm{fit}}$ decays exponentially with $N_c$ for analytic $u$. Thus the boundary layer contribution is
-\[
-\|(u' - \calD_{\cheb} u)\chi_{L\cup R}\|_\infty \leq C_1 \rho^{-N_c} N_c^2 + C_3 \epsilon_{\mathrm{reg}},
-\]
-where $C_1$ depends on the Bernstein ellipse parameter $\rho$ and the derivative order $m$, and $C_3 = \|E C^m\|_2$.
+\textbf{Step 1: Boundary layer truncation error.}
+In $\Omega_L\cup\Omega_R$, the derivative is computed via the Chebyshev direct-evaluation pipeline $EC^mV^\dagger$ (Eq.~\eqref{eq:cheb_direct_eval}). By Proposition~\ref{prop:cheb_conv}, the Chebyshev truncation error for the $m$-th derivative of an analytic function is bounded by $C_T\rho^{-N_c}N_c^{2m}$. This gives the first term in~\eqref{eq:hybrid_error}.
 
-\textbf{Step 2: Interior error.}
+\textbf{Step 2: Scattered regression error.}
+By Lemma~\ref{lem:vandermonde}, the regression error in coefficient space is bounded by $\|u-Vc^*\|_2/\sigma_{\min}(V)$. For analytic $u$, the pointwise fitting residual decays as $O(\rho^{-N_c})$, so $\|u-Vc^*\|_2=O(\sqrt{M}\rho^{-N_c})$. Since $\sigma_{\min}(V)\geq c_0\sqrt{M}$ (Lemma~\ref{lem:vandermonde}), the $\sqrt{M}$ factors cancel, yielding coefficient error $O(\rho^{-N_c}/\sigma_{\min}(V))$. Applying the derivative and evaluation matrices $EC^m$ amplifies this by $\|EC^m\|_2$, yielding the third term $C_3\rho^{-N_c}$.
+
+\textbf{Step 3: Interior error.}
 In $\Omega_I$, the error depends on the chosen basis:
 \begin{itemize}
-    \item \textit{Chebyshev interior}: The same direct-evaluation pipeline applies, yielding $\epsilon_{\mathrm{int}}^{\cheb} = C_I \rho^{-N_c} N_c^2 + C_3 \epsilon_{\mathrm{reg}}$.
-    \item \textit{NUFFT interior}: By Proposition~\ref{prop:nufft_acc}, the Type~1 gridding and Type~2 evaluation introduce error $C_N N_f^{1-p} + C'_N \epsilon_{\nufft}$, where $p$ is the Fourier coefficient decay rate. For non-periodic $u$, $p=1$ (Gibbs phenomenon), giving only $O(N_f^0)$ convergence; for periodic $u$, $p$ is arbitrarily large and convergence is spectral.
+    \item \textit{Chebyshev interior}: The same direct-evaluation pipeline applies, yielding $\epsilon_{\mathrm{int}}^{\cheb}=C_I\rho^{-N_c}N_c^{2m}+C_3\rho^{-N_c}$.
+    \item \textit{NUFFT interior}: By Proposition~\ref{prop:nufft_acc}, the Type~1 gridding and Type~2 evaluation introduce error $C_N N_f^{1-p}+C'_N\epsilon_{\mathrm{tol}}$, where $p$ is the Fourier coefficient decay rate and $\epsilon_{\mathrm{tol}}$ is the NUFFT precision tolerance. For non-periodic $u$, $p=1$ (Gibbs phenomenon); for periodic $u$, $p$ is arbitrarily large.
 \end{itemize}
+This gives the second term $C_2\epsilon_{\mathrm{int}}$.
 
-\textbf{Step 3: Overlap consistency error.}
-In the overlap regions $\Omega_L \cap \Omega_I$ and $\Omega_I \cap \Omega_R$, the hybrid derivative is a convex combination $w_L \calD_{\cheb,L} u + w_I \calD_{\mathrm{int}} u$. The blending error is
-\[
-\|w_L(\calD_{\cheb,L} u - u') + w_I(\calD_{\mathrm{int}} u - u')\|_\infty
-\leq \|w_L\|_\infty \|\calD_{\cheb,L} u - u'\|_\infty + \|w_I\|_\infty \|\calD_{\mathrm{int}} u - u'\|_\infty.
-\]
-Since $\|w_k\|_\infty \leq 1$, this is bounded by the maximum of the two regional errors, which is already accounted for in Steps~1 and~2. The Schwarz extension ensures neither representation extrapolates beyond its reference domain, so no additional extrapolation error appears. The residual consistency error $\epsilon_{\mathrm{overlap}}$ captures the mismatch at the interface where the window transitions; it is $O(\rho^{-N_c})$ for analytic $u$ because both approximations converge to the same derivative.
+\textbf{Step 4: Window-function blending error.}
+In the overlap regions, the blended derivative includes the window-derivative term identified in Lemma~\ref{lem:window}: $w_L'(u_L-u)+w_I'(u_I-u)$. The function-value approximation errors $\|u_L-u\|_\infty$ and $\|u_I-u\|_\infty$ are both $O(\rho^{-N_c})$ for analytic $u$ (Chebyshev interpolation converges exponentially in function value). Since $\|w_L'\|_\infty=O(\epsilon^{-1})$, this contributes $C_4\epsilon^{-1}\rho^{-N_c}$, the fourth term in~\eqref{eq:hybrid_error}.
 
-\textbf{Step 4: Global bound.}
-Combining the three regions via the triangle inequality and taking the supremum over $\Omega$ yields
-\[
-\|u' - \calD_{\hybrid} u\|_\infty \leq \max_{k \in \{L,I,R\}} \|w_k\|_\infty \cdot \max(\text{regional errors}) + C_4 \epsilon_{\mathrm{overlap}},
-\]
-which simplifies to Eq.~\eqref{eq:hybrid_error} with $C_2$ absorbing the interior basis constants.
+\textbf{Step 5: Global bound.}
+Combining the four contributions via the triangle inequality and taking the supremum over $\Omega$ yields Eq.~\eqref{eq:hybrid_error}. The window functions satisfy $0\leq w_k\leq 1$, so no additional amplification factor appears in the regional error terms. The discrete $\ell^2$ bounds from Steps~1--3 are converted to the $\infty$-norm via $\|v\|_\infty\leq\|v\|_2$, which introduces no $M$-dependent factor.
 \end{proof}
 
 \begin{remark}[Practical choice of interior basis]
-For non-periodic problems, the Chebyshev interior is preferred because it avoids the Gibbs phenomenon and achieves exponential convergence throughout the domain. The NUFFT interior is advantageous for periodic subdomains or when the collocation points are uniformly distributed, as it avoids the RBF interpolation step entirely. The hybrid framework allows this choice to be made per-subdomain, adapting to the local smoothness and boundary structure.
+For non-periodic problems, the Chebyshev interior is preferred because it avoids the Gibbs phenomenon and achieves exponential convergence throughout the domain. The NUFFT interior is advantageous for periodic subdomains or when the collocation points are uniformly distributed, as it avoids the scattered-point regression step entirely. The hybrid framework allows this choice to be made per-subdomain, adapting to the local smoothness and boundary structure.
+\end{remark}
+
+\subsection{Stability of the hybrid operator}\label{subsec:stability}
+
+During training, the gradient of the PDE residual with respect to the network parameters contains a factor $A^\T$, where $A$ is the assembled hybrid derivative matrix. The magnitude of this factor controls whether gradient explosion occurs. We quantify it as follows.
+
+\begin{proposition}[Operator norm of the hybrid derivative]\label{prop:stability}
+Let $A=W_L\calD_{\cheb,L}+W_I\calD_{\mathrm{int}}+W_R\calD_{\cheb,R}$ be the assembled $m$-th derivative hybrid matrix. Then
+\begin{equation}
+    \|A\|_2 \leq 2\|\calD_{\cheb}^{(m)}\|_2 + \|\calD_{\mathrm{int}}^{(m)}\|_2,
+    \label{eq:norm_bound}
+\end{equation}
+where $\|\calD_{\cheb}^{(m)}\|_2$ is the two-norm of the Chebyshev $m$-th derivative matrix (including scattered regression and evaluation). For the $m$-th Chebyshev differentiation matrix on $N_c$ modes, $\|\calD_{\cheb}^{(m)}\|_2=O(N_c^{2m})$. Consequently, for the default settings ($N_c=32$, $m=2$), $\|A\|_2=O(10^3)$--$O(10^4)$.
+\end{proposition}
+\begin{proof}
+By the triangle inequality and submultiplicativity,
+\[
+\|A\|_2 \leq \|W_L\|_2\|\calD_{\cheb,L}\|_2 + \|W_I\|_2\|\calD_{\mathrm{int}}\|_2 + \|W_R\|_2\|\calD_{\cheb,R}\|_2.
+\]
+Since $W_L,W_I,W_R$ are diagonal with entries in $[0,1]$, $\|W_k\|_2\leq 1$. The two boundary layers each contribute at most $\|\calD_{\cheb}^{(m)}\|_2$, giving~\eqref{eq:norm_bound}. The bound $\|D^{(m)}\|_2=O(N_c^{2m})$ for the Chebyshev differentiation matrix is classical~\cite{trefethen2000spectral}; the scattered regression and evaluation matrices have norms bounded by $\kappa_2(V)$ and $\sqrt{N_c}$ respectively, both absorbed into the constant for $N_c\leq 64$.
+\end{proof}
+
+\begin{remark}[Implications for training]
+Proposition~\ref{prop:stability} shows that the hybrid derivative amplifies gradients by $O(N_c^{2m})$, which is the same order as any spectral differentiation matrix and is independent of the number of collocation points $M$. For second-order PDEs with $N_c=32$, this amplification is moderate ($\sim 10^3$--$10^4$) and is readily controlled by gradient clipping or learning-rate scaling. In contrast, automatic differentiation through a deep network can produce gradient magnitudes that vary exponentially with depth, making spectral differentiation a more predictable choice for high-order PDEs.
 \end{remark}
 
 \subsection{Integration with PINNs}\label{subsec:pinn}
@@ -422,7 +485,7 @@ For Dirichlet boundary conditions, we additionally employ a hard-constraint netw
     u_\theta(\bfx) = \eta(\bfx) \cdot \mathrm{MLP}_\theta(\bfx) + u_{\mathrm{bc}}(\bfx),
     \label{eq:hard_bc}
 \end{equation}
-where $\eta(\bfx) = 0$ on $\partial\Omega$ and $u_{\mathrm{bc}}$ satisfies the boundary conditions. This eliminates the need for a boundary loss term entirely.
+where $\mathrm{MLP}_\theta$ denotes a multilayer perceptron with parameters $\theta$, $\eta(\bfx) = 0$ on $\partial\Omega$ and $u_{\mathrm{bc}}$ satisfies the boundary conditions. This eliminates the need for a boundary loss term entirely.
 
 %%% Algorithm box %%%
 \begin{algorithm}[t]
@@ -442,7 +505,7 @@ where $\eta(\bfx) = 0$ on $\partial\Omega$ and $u_{\mathrm{bc}}$ satisfies the b
     \State Assemble PDE residual $\calN[u_\theta](\bfx_j)$ using hybrid derivatives
     \State Compute loss $\calL(\bftheta)$ via Eq.~\eqref{eq:pinn_loss}
     \State Backpropagate using exact adjoint $\calD_{\hybrid}^*$ (Theorem~\ref{thm:adjoint})
-    \State Update $\bftheta \leftarrow \bftheta - \eta \nabla_\bftheta \calL$
+    \State Update $\bftheta \leftarrow \bftheta - \eta \nabla_{\bftheta} \calL$
 \EndFor
 \end{algorithmic}
 \end{algorithm}
@@ -453,9 +516,9 @@ where $\eta(\bfx) = 0$ on $\partial\Omega$ and $u_{\mathrm{bc}}$ satisfies the b
 \section{Numerical Experiments}\label{sec:experiments}
 
 \subsection{Implementation details}\label{subsec:impl}
-All experiments are implemented in Python 3.11 with PyTorch 2.6.0 and finufft 2.5.1. The differentiable Chebyshev layer and hybrid layer are implemented as custom \texttt{torch.autograd.Function} modules. Training uses the Adam optimizer with linear warmup and cosine annealing. Collocation points are generated via Halton quasi-random sampling unless otherwise specified. The default boundary layer width is $\delta = 0.15(b-a)$, overlap width $\epsilon = 0.05(b-a)$, Chebyshev modes $N_c = 32$, and Fourier modes $N_f = 16$.
+All experiments are implemented in Python 3.11 with PyTorch~\cite{paszke2019pytorch} 2.6.0 and finufft 2.5.1. The differentiable Chebyshev layer and hybrid layer are implemented as custom \texttt{torch.autograd.Function} modules. Training uses the Adam optimizer with linear warmup and cosine annealing. Collocation points are generated via Halton quasi-random sampling unless otherwise specified. The default boundary layer width is $\delta = 0.15(b-a)$, overlap width $\epsilon = 0.05(b-a)$, Chebyshev modes $N_c = 32$, and Fourier modes $N_f = 16$.
 
-The hybrid operator requires a one-time precomputation of the SVD regression matrices and the assembled differentiation matrix $A$. On the reference hardware (Intel i7-8850H, 32\,GB RAM), this takes approximately 1.0\,s for the 1D problem ($M=2000$) and 11.3\,s for the 2D tensor-product problem ($M=5000$), representing only 2.5\% and 2.2\% of the respective per-seed training times. The precomputation is independent of the network parameters and is performed once before training begins.
+The hybrid operator requires a one-time precomputation of the SVD regression matrices and the assembled differentiation matrix $A$. On the reference hardware (Intel i7-8850H, 32\,GB RAM), this takes approximately 1.0\,s for the 1D problem ($M=2000$) and 11.3\,s for the 2D tensor-product problem ($M=5000$), representing only 2.5\% and 2.2\% of the respective per-seed training times. The precomputation is independent of the network parameters and is performed once before training begins. The source code and experimental data are available at \url{https://github.com/fzmath/chebyshev-nufft-pinn}.
 
 Baseline methods include:
 \begin{itemize}
@@ -490,7 +553,7 @@ with exact solution $u(x) = \sin(\pi x) + 0.5\sin(3\pi x)$ and $f(x) = \pi^2 \si
 We use $M=2000$ Halton-sampled collocation points, a 3-hidden-layer MLP (64 neurons, Tanh activation), and train for 5000 steps with Adam (lr=$10^{-3}$, warmup 500, cosine annealing). Dirichlet boundary conditions are enforced via the hard constraint $u_\theta(x) = x(1-x)\,\mathrm{MLP}_\theta(x)$. The hybrid layer uses $\delta=0.15$, $\epsilon=0.05$, $N_c=32$, $N_f=16$. Three random seeds (42, 123, 456) are used for all methods.
 
 \subsubsection{Results}
-Table~\ref{tab:poisson1d} summarizes the relative $L^2$ errors and training times. The hybrid layer achieves accuracy comparable to AD-PINN ($4.78\times10^{-6}$ vs $4.72\times10^{-6}$) while training $2.5\times$ faster (41.4\,s vs 104.6\,s per seed). The pure Chebyshev method also converges in 1D and achieves slightly higher accuracy ($4.14\times10^{-6}$), because a single-interval Chebyshev fit suffices when the domain is one-dimensional; however, it trains $2.9\times$ slower than the hybrid layer due to the cost of scattered-point regression on the full interval. The pure finufft method completely fails ($L^2\approx14$) because the periodic Fourier basis cannot represent the non-periodic solution, leading to severe Gibbs phenomenon at the boundaries. We emphasize that the hybrid architecture's necessity becomes evident in 2D (Section~\ref{subsec:exp3}), where pure Chebyshev interpolation diverges.
+Table~\ref{tab:poisson1d} summarizes the relative $L^2$ errors and training times. The hybrid layer achieves accuracy comparable to AD-PINN ($4.78\times10^{-6}$ vs $4.72\times10^{-6}$) while training $2.5\times$ faster (41.4\,s vs 104.6\,s per seed). The pure Chebyshev method also converges in 1D and achieves slightly higher accuracy ($4.14\times10^{-6}$), because a single-interval Chebyshev fit suffices when the domain is one-dimensional; however, it trains $2.9\times$ slower than the hybrid layer due to the cost of scattered-point regression on the full interval. The pure finufft method completely fails ($L^2\approx14$) because the periodic Fourier basis cannot represent the non-periodic solution, leading to severe Gibbs phenomenon at the boundaries. We emphasize that the hybrid architecture's necessity becomes evident in 2D (Section~\ref{subsec:exp3}), where direct scattered-point Chebyshev regression becomes ill-conditioned; the tensor-product Chebyshev grid used there avoids this issue while retaining spectral accuracy.
 
 \begin{table}[t]
 \centering
@@ -538,13 +601,7 @@ with exact solution $u(x,y) = \sin(\pi x)\sin(\pi y) + 0.3\sin(2\pi x)\sin(2\pi 
 To demonstrate the dimensional scalability of the spectral approach, we use a Chebyshev tensor-product grid with $N_c=32$ modes per dimension ($33\times33=1089$ collocation points). The grid is non-uniform, with quadrature points clustered near the boundaries as required for stable Chebyshev differentiation. The Laplacian is computed via the tensor product of 1D Chebyshev differentiation matrices: $\Delta u = 4(D_x^{(2)}\otimes I_y + I_x\otimes D_y^{(2)})u$, where the factor 4 accounts for the mapping from $[-1,1]^2$ to $[0,1]^2$. This achieves machine-precision derivative accuracy (relative $L^2$ error $<10^{-12}$ for the exact solution). We use a 4-hidden-layer MLP (128 neurons, Tanh activation), train for 8000 steps with Adam (lr=$10^{-3}$, warmup 1000, cosine annealing), and enforce Dirichlet BCs via $u_\theta(x,y) = x(1-x)y(1-y)\,\mathrm{MLP}_\theta(x,y)$. Three random seeds are used.
 
 \subsubsection{Results}
-Table~\ref{tab:poisson2d} summarizes the results. The key observations are:
-
-\begin{enumerate}
-    \item \textbf{Spectral accuracy in 2D}: The Chebyshev tensor-product method achieves $L^2 = 9.95\times10^{-6} \pm 1.23\times10^{-6}$, comparable to AD-PINN ($8.97\times10^{-6} \pm 1.31\times10^{-6}$), confirming that the spectral differentiation approach scales to higher dimensions without accuracy loss.
-    \item \textbf{Speed advantage}: The spectral method trains $5.6\times$ faster than AD-PINN (285\,s vs 1586\,s per seed), because the Laplacian is a pre-assembled constant matrix-vector product rather than per-sample second-order autograd.
-    \item \textbf{Machine-precision derivatives}: The Chebyshev tensor-product Laplacian achieves relative error $5.1\times10^{-13}$ on the exact solution, eliminating derivative discretization error as a training bottleneck.
-\end{enumerate}
+Table~\ref{tab:poisson2d} summarizes the results. The Chebyshev tensor-product method achieves $L^2 = 9.95\times10^{-6} \pm 1.23\times10^{-6}$, comparable to AD-PINN ($8.97\times10^{-6} \pm 1.31\times10^{-6}$), and trains $5.6\times$ faster (285\,s vs 1586\,s per seed). The speedup comes from replacing per-sample second-order autograd with a pre-assembled constant matrix-vector product. The Chebyshev tensor-product Laplacian itself has relative error $5.1\times10^{-13}$ on the exact solution, so derivative discretization is not a bottleneck.
 
 \begin{table}[t]
 \centering
@@ -555,24 +612,25 @@ Table~\ref{tab:poisson2d} summarizes the results. The key observations are:
 Method & Rel.\ $L^2$ error & Time (s/seed) \\
 \midrule
 AD-PINN & $8.97\times10^{-6} \pm 1.31\times10^{-6}$ & 1586 \\
-\textbf{Chebyshev-PINN (Ours)} & $\mathbf{9.95\times10^{-6} \pm 1.23\times10^{-6}}$ & \textbf{285} \\
+\textbf{Hybrid-PINN (Ours)} & $\mathbf{9.95\times10^{-6} \pm 1.23\times10^{-6}}$ & \textbf{285} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Both methods achieve similar high accuracy, but the spectral approach trains $5.6\times$ faster because the constant-matrix Laplacian avoids the overhead of second-order automatic differentiation at each training step. The Chebyshev tensor grid provides a natural non-uniform discretization that clusters points near boundaries, where solution gradients are typically largest.
+Both methods reach similar accuracy, but the spectral approach trains $5.6\times$ faster because the constant-matrix Laplacian avoids the overhead of second-order automatic differentiation at each step. The Chebyshev tensor grid clusters points near boundaries, where solution gradients are typically largest.
 
 Figure~\ref{fig:poisson2d_conv} shows the training convergence, and Figure~\ref{fig:poisson2d_sol} shows the solution comparison.
 
 \begin{figure}[t]
 \centering
-\begin{subfigure}{0.48\textwidth}
+\begin{subfigure}{0.75\textwidth}
 \includegraphics[width=\textwidth]{../figures/poisson_2d_chebgrid_convergence.png}
 \caption{Training convergence}
 \label{fig:poisson2d_conv}
 \end{subfigure}
-\hfill
-\begin{subfigure}{0.48\textwidth}
+
+\vspace{0.5em}
+\begin{subfigure}{0.75\textwidth}
 \includegraphics[width=\textwidth]{../figures/poisson_2d_solution.png}
 \caption{Solution comparison}
 \label{fig:poisson2d_sol}
@@ -594,7 +652,7 @@ The most important ablation compares the full hybrid layer against its two pure 
 In 2D, we use a Chebyshev tensor grid (Section~\ref{subsec:exp3}), where the tensor-product Chebyshev differentiation achieves machine-precision derivatives without any scattered interpolation. This demonstrates that the spectral approach is dimensionally scalable: 1D scattered points require the hybrid domain decomposition, while 2D tensor grids admit direct spectral differentiation.
 
 \subsubsection{Boundary layer width $\delta$}
-We vary the boundary layer width $\delta \in \{0.05, 0.10, 0.15, 0.20, 0.30\}$ on the 1D Poisson problem with $M=2000$ collocation points. The relative $L^2$ errors are $4.59\times10^{-6}$, $4.68\times10^{-6}$, $4.78\times10^{-6}$, $4.71\times10^{-6}$, and $4.57\times10^{-6}$ for $\delta=0.05, 0.10, 0.15, 0.20, 0.30$, respectively. The results are nearly identical across this range (all within 5\%), indicating that the hybrid layer is robust to the choice of boundary layer width. This is expected: as long as the boundary layers cover the region where the Chebyshev basis is needed to enforce non-periodic BCs, the interior Chebyshev basis handles the rest. Very small $\delta$ may degrade performance if the boundary layer cannot resolve sharp boundary layers in the solution; very large $\delta$ reduces the interior region size but does not affect accuracy since both regions use the same Chebyshev basis by default. Figure~\ref{fig:ablation_delta} shows the results.
+We vary $\delta \in \{0.05, 0.10, 0.15, 0.20, 0.30\}$ on the 1D Poisson problem with $M=2000$ collocation points. The relative $L^2$ errors are $4.59\times10^{-6}$, $4.68\times10^{-6}$, $4.78\times10^{-6}$, $4.71\times10^{-6}$, and $4.57\times10^{-6}$, respectively---all within 5\% of each other. The method is thus robust to the choice of $\delta$: as long as the boundary layers cover the region where non-periodic BCs are enforced, the interior Chebyshev basis handles the rest. Very small $\delta$ may fail to resolve sharp boundary layers; very large $\delta$ reduces the interior region but does not affect accuracy since both regions use the same Chebyshev basis by default. Figure~\ref{fig:ablation_delta} shows the results.
 
 \begin{figure}[t]
 \centering
@@ -607,17 +665,17 @@ We vary the boundary layer width $\delta \in \{0.05, 0.10, 0.15, 0.20, 0.30\}$ o
 We vary the Schwarz overlap width $\epsilon \in \{0, 0.025, 0.05, 0.10\}$ with $\delta=0.15$. The relative $L^2$ errors are $4.82\times10^{-6}$, $4.84\times10^{-6}$, $4.78\times10^{-6}$, and $4.49\times10^{-6}$ for $\epsilon=0, 0.025, 0.05, 0.10$, respectively. Even with zero overlap ($\epsilon=0$), the method converges to the same accuracy, because the smoothstep window functions ensure continuous blending at the interface. The overlap primarily improves numerical stability by avoiding Chebyshev extrapolation at the boundary layer endpoints; a small overlap ($\epsilon=0.05$) is sufficient and is used as the default.
 
 \subsubsection{Chebyshev modes $N_c$}
-We vary the number of Chebyshev modes $N_c \in \{8, 16, 32, 64\}$. The relative $L^2$ errors are $5.51\times10^{-4}$, $7.83\times10^{-6}$, $4.78\times10^{-6}$, and $4.59\times10^{-6}$ for $N_c=8, 16, 32, 64$, respectively. With only 8 modes, the error is two orders of magnitude larger ($5.5\times10^{-4}$) because the Chebyshev basis cannot resolve the solution's spectral content. Increasing to 16 modes reduces the error by nearly two orders of magnitude, and beyond $N_c=32$ the error saturates at machine-precision-limited values ($\sim4.6\times10^{-6}$), consistent with the exponential convergence of Chebyshev spectral methods for analytic solutions (Proposition~\ref{prop:cheb_conv}). The default $N_c=32$ provides a good balance between accuracy and precomputation cost.
+We vary $N_c \in \{8, 16, 32, 64\}$. The relative $L^2$ errors are $5.51\times10^{-4}$, $7.83\times10^{-6}$, $4.78\times10^{-6}$, and $4.59\times10^{-6}$, respectively. With only 8 modes, the error is two orders of magnitude larger because the Chebyshev basis cannot resolve the solution's spectral content. Increasing to 16 modes reduces the error by nearly two orders of magnitude, and beyond $N_c=32$ the error saturates at $\sim4.6\times10^{-6}$. The default $N_c=32$ balances accuracy and precomputation cost.
 
 \subsubsection{Interior basis selection}
-We compare the two interior basis options on the non-periodic 1D Poisson problem. With \texttt{interior\_method='cheb'}, the hybrid layer achieves $L^2 = 4.78\times10^{-6} \pm 1.73\times10^{-6}$. With \texttt{interior\_method='nufft'}, the method fails to converge ($L^2 = 0.214 \pm 0.213$), because the periodic Fourier basis exhibits Gibbs phenomenon at the interior region's non-periodic boundaries, and the random-point Riemann-sum approximation of Fourier coefficients introduces significant sampling noise. This confirms that for non-periodic problems, the Chebyshev interior is essential; the NUFFT interior is intended for periodic subdomains or uniformly sampled periodic problems, where it retains the $O(N\log N)$ efficiency of finufft.
+We compare the two interior basis options on the non-periodic 1D Poisson problem. With \texttt{interior\_method='cheb'}, the hybrid layer achieves $L^2 = 4.78\times10^{-6} \pm 1.73\times10^{-6}$. With \texttt{interior\_method='nufft'}, the method fails to converge ($L^2 = 0.214 \pm 0.213$): the periodic Fourier basis exhibits Gibbs phenomenon at the interior region's non-periodic boundaries, and the random-point Riemann-sum approximation of Fourier coefficients introduces sampling noise. The Chebyshev interior is therefore the default for non-periodic problems; the NUFFT interior is useful for periodic subdomains or uniformly sampled periodic problems, where it retains the $O(N\log N)$ efficiency of finufft.
 
 \subsubsection{Number of collocation points $M$}
-We vary the number of non-uniform collocation points $M \in \{500, 1000, 2000, 5000\}$ for both the hybrid layer and AD-PINN. Table~\ref{tab:ablation_M} summarizes the results. Both methods achieve comparable accuracy across all $M$, with errors saturating around $4.5\times10^{-6}$ for $M\geq1000$. The hybrid layer trains significantly faster than AD-PINN, especially at larger $M$: at $M=5000$, the hybrid layer takes 299\,s per seed compared to 620\,s for AD-PINN (2.1$\times$ speedup). This is because the hybrid layer's derivative is a precomputed matrix-vector product, while AD requires per-sample backward passes whose cost grows with $M$.
+We vary $M \in \{500, 1000, 2000, 5000\}$ for both the hybrid layer and AD-PINN. Table~\ref{tab:ablation_M} summarizes the results. Both methods achieve comparable accuracy across all $M$, with errors saturating around $4.5\times10^{-6}$ for $M\geq1000$. The hybrid layer trains faster than AD-PINN at all $M$, and the gap widens with $M$: at $M=5000$, the hybrid layer takes 299\,s per seed compared to 620\,s for AD-PINN (2.1$\times$ speedup). The hybrid derivative is a precomputed matrix-vector product, whereas AD requires per-sample backward passes whose cost grows with $M$.
 
 \begin{table}[t]
 \centering
-\caption{Ablation over number of collocation points $M$ (1D Poisson, Dirichlet, 3 seeds).}
+\caption{Ablation over number of collocation points $M$ (1D Poisson, Dirichlet, 3 seeds). Timing includes precomputation of the hybrid operator matrix.}
 \label{tab:ablation_M}
 \begin{tabular}{ccccc}
 \toprule
@@ -642,7 +700,7 @@ with exact solution $u(x) = \cos(\pi x)$ and $f(x) = \pi^2 \cos(\pi x)$. Unlike 
 \end{equation}
 where $u'_\theta$ is computed via the hybrid layer (or AD for the baseline). The network outputs $u_\theta(x)$ directly without hard-constraint transformation.
 
-Table~\ref{tab:neumann} summarizes the results. Since the Neumann problem admits a one-dimensional constant nullspace, we report the relative $L^2$ error after removing the mean from both the predicted and exact solutions (i.e., $\|u_\theta-\bar{u}_\theta - (u^*-\bar{u}^*)\|/\|u^*-\bar{u}^*\|$), which is the standard practice for problems with a zero-energy mode. Both methods achieve high accuracy: AD-PINN reaches $L^2 = 1.01\times10^{-5} \pm 4.99\times10^{-6}$, while the hybrid layer reaches $L^2 = 1.09\times10^{-5} \pm 4.42\times10^{-6}$, with the hybrid layer training 2.2$\times$ faster (152\,s vs 340\,s). The hybrid layer's spectral derivative provides accurate boundary derivative evaluation, which helps enforce the Neumann soft constraint precisely. Without mean-centering, both methods exhibit large apparent errors ($\sim0.1$--$0.3$) due to an arbitrary additive constant in the solution, which is a feature of the Neumann problem rather than a failure of either method.
+Table~\ref{tab:neumann} summarizes the results. Since the Neumann problem admits a one-dimensional constant nullspace, we report the relative $L^2$ error after removing the mean from both the predicted and exact solutions (i.e., $\|u_\theta-\bar{u}_\theta - (u^*-\bar{u}^*)\|/\|u^*-\bar{u}^*\|$), which is standard for problems with a zero-energy mode. Both methods achieve high accuracy: AD-PINN reaches $L^2 = 1.01\times10^{-5} \pm 4.99\times10^{-6}$, while the hybrid layer reaches $L^2 = 1.09\times10^{-5} \pm 4.42\times10^{-6}$, with the hybrid layer training 2.2$\times$ faster (152\,s vs 340\,s). The spectral derivative provides accurate boundary derivative evaluation, which helps enforce the Neumann soft constraint. Without mean-centering, both methods show large apparent errors ($\sim0.1$--$0.3$) due to the arbitrary additive constant inherent to the Neumann problem.
 
 \begin{table}[t]
 \centering
@@ -727,7 +785,7 @@ The network takes $(x,t)$ as input and outputs $u_\theta(x,t)$. Spatial derivati
 \end{equation}
 We use $M=1000$ non-uniform spatial collocation points (Halton) and $N_t=100$ uniformly spaced time steps, for a total of $10^5$ spacetime collocation points. Training uses Adam with 3000 steps. Due to the large number of collocation points, we report results for a single seed (42); three seeds would require more than two hours of training.
 
-Table~\ref{tab:heat} summarizes the results. Both methods achieve identical accuracy ($L^2 = 7.86\times10^{-4}$), confirming that the hybrid layer's spatial derivatives are as accurate as AD for time-dependent problems. The hybrid layer trains 2.8$\times$ faster (1074\,s vs 2997\,s), because the spatial second derivative is computed via the precomputed hybrid matrix while only the time derivative requires AD. This demonstrates that the hybrid layer is particularly advantageous for spacetime problems, where the spatial derivative is evaluated at many points and the constant-matrix representation amortizes its precomputation cost.
+Table~\ref{tab:heat} summarizes the results. Both methods achieve identical accuracy ($L^2 = 7.86\times10^{-4}$), and the hybrid layer trains 2.8$\times$ faster (1074\,s vs 2997\,s): the spatial second derivative is computed via the precomputed hybrid matrix while only the time derivative requires AD. The speedup is particularly pronounced for spacetime problems, where the spatial derivative is evaluated at many points and the constant-matrix representation amortizes its precomputation cost.
 
 \begin{table}[t]
 \centering
@@ -761,7 +819,7 @@ with manufactured solution $u(x)=\sin(\pi x)$ and true coefficient $a(x)=1+0.5\s
 \end{equation}
 The first and second derivatives of $u_\theta$ and the first derivative of $a_\phi$ are computed via the hybrid layer (or AD for the baseline). Training uses Adam with 10000 steps and 3 random seeds.
 
-Table~\ref{tab:inversion} summarizes the results. Both methods recover the diffusion coefficient to sub-percent accuracy ($\sim 4\times10^{-3}$ relative $L^2$ error), with the hybrid layer training $1.8\times$ faster (531\,s vs 967\,s). The constant-matrix derivative representation is particularly advantageous here because both $u'$ and $a'$ must be evaluated at every training step, and the hybrid layer computes both via pre-assembled matrix-vector products. Figure~\ref{fig:inversion} shows the recovered coefficient for a representative seed.
+Table~\ref{tab:inversion} summarizes the results. Both methods recover the diffusion coefficient to sub-percent accuracy ($\sim 4\times10^{-3}$ relative $L^2$ error), with the hybrid layer training $1.8\times$ faster (531\,s vs 967\,s). The constant-matrix derivative representation helps here because both $u'$ and $a'$ must be evaluated at every training step, and the hybrid layer computes both via pre-assembled matrix-vector products. Figure~\ref{fig:inversion} shows the recovered coefficient for a representative seed.
 
 \begin{table}[t]
 \centering
@@ -789,26 +847,42 @@ AD-PINN & $4.16\times10^{-3} \pm 0.71\times10^{-3}$ & 967 \\
 %%% =====================================================================
 \section{Conclusion}\label{sec:conclusion}
 
-We have presented a differentiable Chebyshev--NUFFT hybrid layer for physics-informed neural networks that enables spectral-accuracy derivative computation on non-periodic domains with arbitrary non-uniform collocation points. The method combines three key ingredients: (i) domain decomposition with Chebyshev differentiation in boundary layers to handle Dirichlet, Neumann, and Robin boundary conditions, (ii) an optional NUFFT interior for non-uniform spatial sampling, and (iii) Schwarz overlap with smooth window functions for stable coupling. The entire operator is assembled as a single constant matrix $A$, so that forward evaluation is $Au$ and the exact adjoint is $A^\T$, enabling end-to-end backpropagation verified by \texttt{gradcheck} and the adjoint identity to machine precision.
+We presented a differentiable Chebyshev--NUFFT hybrid layer for PINNs that computes spectral-accuracy derivatives on non-periodic domains with arbitrary non-uniform collocation points. The method combines domain decomposition with Chebyshev differentiation in boundary layers, an optional NUFFT interior, and Schwarz overlap with smooth window functions. The entire operator is a single constant matrix $A$, so forward evaluation is $Au$ and the exact adjoint is $A^\T$, enabling end-to-end backpropagation verified by \texttt{gradcheck} and the adjoint identity to machine precision.
 
-Numerical experiments on 1D and 2D Poisson equations with Dirichlet, Neumann, and Robin boundary conditions, as well as a 1D heat equation, demonstrate that:
+Numerical experiments on 1D and 2D Poisson equations with Dirichlet, Neumann, and Robin boundary conditions, a heat equation, and a diffusion-coefficient inversion problem show that:
 \begin{itemize}
-    \item The hybrid layer achieves accuracy comparable to AD-PINN on Dirichlet problems ($4.78\times10^{-6}$ vs $4.72\times10^{-6}$ in 1D; $9.95\times10^{-6}$ vs $8.97\times10^{-6}$ in 2D) while training $2.5$--$5.6\times$ faster.
-    \item On Neumann and Robin boundary conditions, the hybrid layer matches AD-PINN in accuracy (Neumann: $1.09\times10^{-5}$ vs $1.01\times10^{-5}$, after mean-centering; Robin: $1.46\times10^{-4}$ vs $1.80\times10^{-4}$), with speedups of $1.6$--$2.2\times$.
-    \item On the heat equation, both methods achieve identical accuracy ($7.86\times10^{-4}$), but the hybrid layer trains $2.8\times$ faster by precomputing spatial derivatives.
-    \item In a parameter inversion problem (recovering a spatially varying diffusion coefficient from 30% sparse observations), the hybrid layer achieves accuracy comparable to AD-PINN ($4.32\times10^{-3}$ vs $4.16\times10^{-3}$) while training $1.8\times$ faster, demonstrating the method's applicability to inverse problems.
-    \item Pure Chebyshev and pure finufft methods both diverge on non-uniform non-periodic problems (2D), confirming that the hybrid domain decomposition with SVD-based scattered regression and Schwarz overlap is essential.
-    \item The NUFFT interior basis fails on non-periodic subdomains ($L^2\approx0.21$), while the Chebyshev interior converges to $4.8\times10^{-6}$, validating the default choice of Chebyshev for non-periodic problems.
-    \item Ablation studies show that the method is robust to boundary layer width $\delta$ and overlap width $\epsilon$, requires $N_c\geq16$ Chebyshev modes for spectral accuracy, and maintains accuracy with as few as 500 collocation points.
+    \item The hybrid layer matches AD-PINN accuracy on Dirichlet problems ($4.78\times10^{-6}$ vs $4.72\times10^{-6}$ in 1D; $9.95\times10^{-6}$ vs $8.97\times10^{-6}$ in 2D) while training $2.5$--$5.6\times$ faster.
+    \item On Neumann and Robin BCs, accuracy is comparable (Neumann: $1.09\times10^{-5}$ vs $1.01\times10^{-5}$ after mean-centering; Robin: $1.46\times10^{-4}$ vs $1.80\times10^{-4}$), with speedups of $1.6$--$2.2\times$.
+    \item On the heat equation, both methods reach $7.86\times10^{-4}$, but the hybrid layer trains $2.8\times$ faster by precomputing spatial derivatives.
+    \item In the inversion problem (30\% sparse observations), accuracy is comparable ($4.32\times10^{-3}$ vs $4.16\times10^{-3}$) with $1.8\times$ speedup.
+    \item Pure Fourier methods fail on non-periodic problems ($L^2\approx14$ for finufft-PINN, $L^2\approx0.21$ for NUFFT interior), validating the Chebyshev boundary treatment.
+    \item Ablation studies show robustness to boundary layer width $\delta$ and overlap width $\epsilon$, with $N_c\geq16$ modes needed for spectral accuracy.
 \end{itemize}
 
-The current limitation is that the 2D experiments use a Chebyshev tensor grid rather than fully scattered points, because stable spectral differentiation on arbitrary 2D scattered point sets requires additional interpolation machinery. Future work includes extending the hybrid domain decomposition to 2D scattered points via local RBF-FD stencils, extending to 3D and curvilinear domains, and applying the method to parameter inverse problems and nonlinear PDEs.
+The 2D experiments use a Chebyshev tensor grid rather than fully scattered points, because stable spectral differentiation on arbitrary 2D scattered sets requires additional interpolation machinery. Future work includes extending the hybrid decomposition to 2D scattered points via local RBF-FD stencils, 3D and curvilinear domains, and nonlinear PDEs.
 
 %%% =====================================================================
-%%% Acknowledgements
+%%% Declarations
 %%% =====================================================================
-\section*{Acknowledgements}
-This work was supported by the Natural Science Foundation of Hebei Province (Grant No. A202301032) and the Scientific Research Foundation of Emergency Management University.
+\section*{Declarations}
+
+\paragraph{Funding.}
+This work was supported by the Langfang Science and Technology Research and Development Program Project (Grant No. 2024011015).
+
+\paragraph{Conflicts of interest.}
+The authors declare that they have no conflict of interest.
+
+\paragraph{Availability of data and materials.}
+All experimental data generated in this study are available in the GitHub repository referenced below.
+
+\paragraph{Code availability.}
+The source code, experimental scripts, and precomputed results are available at \url{https://github.com/fzmath/chebyshev-nufft-pinn}.
+
+\paragraph{Authors' contributions.}
+Fuchang Wang: conceptualization, methodology, software, validation, formal analysis, writing---original draft, writing---review and editing, funding acquisition. Huirong Cao: methodology, formal analysis, writing---review and editing, supervision.
+
+\paragraph{Acknowledgements.}
+The authors thank the anonymous reviewers for their constructive comments.
 
 %%% =====================================================================
 %%% References

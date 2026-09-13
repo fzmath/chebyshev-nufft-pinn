@@ -29,24 +29,25 @@ class MLP(nn.Module):
 
 def chebyshev_laplacian_2d(N):
     """Build 2D Chebyshev Laplacian on tensor grid."""
-    D = dc.chebyshev_diff_matrix(N)
+    D, _ = dc.chebyshev_diff_matrix(N)
     D2 = D @ D
-    I = np.eye(N)
+    I = np.eye(N + 1)
     L2d = np.kron(D2, I) + np.kron(I, D2)
     return torch.tensor(L2d, dtype=torch.float64)
 
 def train_2d(method='cheb', seed=42, N=32, steps=8000):
     torch.manual_seed(seed)
     np.random.seed(seed)
-    # Chebyshev tensor grid
-    x1 = np.cos(np.pi * np.arange(N) / (N - 1))
-    x2 = np.cos(np.pi * np.arange(N) / (N - 1))
+    # Chebyshev tensor grid (N intervals = N+1 points per dimension)
+    n_pts = N + 1
+    x1 = np.cos(np.pi * np.arange(n_pts) / N)
+    x2 = np.cos(np.pi * np.arange(n_pts) / N)
     X1, X2 = np.meshgrid(x1, x2, indexing='ij')
     x_flat = np.column_stack([X1.ravel(), X2.ravel()])
     # Map from [-1,1]^2 to [0,1]^2
     x_flat = (x_flat + 1) / 2
     x = torch.tensor(x_flat, dtype=torch.float64)
-    M = N * N
+    M = n_pts * n_pts
     # Exact solution: u = sin(pi*x)*sin(pi*y)
     u_exact = torch.sin(np.pi * x[:, 0]) * torch.sin(np.pi * x[:, 1])
     f_rhs = 2 * (np.pi ** 2) * u_exact
@@ -56,10 +57,10 @@ def train_2d(method='cheb', seed=42, N=32, steps=8000):
     opt = torch.optim.Adam(net.parameters(), lr=1e-3)
     # Boundary mask
     boundary = torch.zeros(M, dtype=torch.bool)
-    for i in range(N):
-        for j in range(N):
-            if i == 0 or i == N-1 or j == 0 or j == N-1:
-                boundary[i * N + j] = True
+    for i in range(n_pts):
+        for j in range(n_pts):
+            if i == 0 or i == n_pts-1 or j == 0 or j == n_pts-1:
+                boundary[i * n_pts + j] = True
     history = []
     t0 = time.time()
     for step in range(steps + 1):
