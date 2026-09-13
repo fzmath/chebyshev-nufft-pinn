@@ -563,7 +563,13 @@ def train_pinn_1d_poisson_bc(method, params=None):
         if step % 500 == 0:
             with torch.no_grad():
                 u_t = net(x_test.reshape(-1, 1)).squeeze(-1)
-                l2 = torch.norm(u_t - u_test_exact) / torch.norm(u_test_exact)
+                if bc_type == 'neumann':
+                    # Neumann problem has constant nullspace: compare centered solutions
+                    u_t_c = u_t - u_t.mean()
+                    u_ex_c = u_test_exact - u_test_exact.mean()
+                    l2 = torch.norm(u_t_c - u_ex_c) / torch.norm(u_ex_c)
+                else:
+                    l2 = torch.norm(u_t - u_test_exact) / torch.norm(u_test_exact)
             history.append({'step': step, 'l2': l2.item(), 'loss': loss.item()})
             if step % 1000 == 0:
                 print(f'    [{method}/{bc_type}] seed={seed} step={step:5d}: '
@@ -572,8 +578,13 @@ def train_pinn_1d_poisson_bc(method, params=None):
     elapsed = time.time() - t0
     with torch.no_grad():
         u_t = net(x_test.reshape(-1, 1)).squeeze(-1)
-        l2_final = (torch.norm(u_t - u_test_exact) /
-                    torch.norm(u_test_exact)).item()
+        if bc_type == 'neumann':
+            u_t_c = u_t - u_t.mean()
+            u_ex_c = u_test_exact - u_test_exact.mean()
+            l2_final = (torch.norm(u_t_c - u_ex_c) / torch.norm(u_ex_c)).item()
+        else:
+            l2_final = (torch.norm(u_t - u_test_exact) /
+                        torch.norm(u_test_exact)).item()
     return {'l2': l2_final, 'time': elapsed, 'history': history, 'net': net}
 
 
