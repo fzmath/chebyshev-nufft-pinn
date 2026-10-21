@@ -47,3 +47,16 @@ desktop.ini
 # Temp
 *.tmp
 *.bak
+paper/
+paper2/
+submission/
+*.tex
+*.bib
+*.bbl
+*.aux
+*.log
+*.out
+*.synctex*
+*.spl
+*.cls
+*.sty
